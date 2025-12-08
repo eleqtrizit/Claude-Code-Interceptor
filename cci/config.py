@@ -119,6 +119,46 @@ class ConfigManager:
 
             self.save_config()
 
+    def remove_config(self, name: str) -> bool:
+        """
+        Remove a saved configuration.
+
+        :param name: Name of the configuration to remove
+        :type name: str
+        :return: True if successful, False otherwise
+        :rtype: bool
+        """
+        if name in self.config['configs']:
+            del self.config['configs'][name]
+
+            # Reset default config if it was the one removed
+            if self.config['default_config'] == name:
+                self.config['default_config'] = None
+
+            self.save_config()
+            return True
+        return False
+
+    def check_and_update_default_config(self) -> bool:
+        """
+        Check if the default configuration still exists and prompt user to select a new one if needed.
+
+        :return: True if there are configs available and user selected a new default,
+                 False if no configs available or user cancelled
+        :rtype: bool
+        """
+        # If there's no default config set, nothing to check
+        if self.config['default_config'] is not None:
+            # Check if the default config still exists
+            if self.config['default_config'] not in self.config['configs']:
+                # Default config no longer exists, set to None
+                self.config['default_config'] = None
+                self.save_config()
+
+        # If there's no default config set but there are configs available,
+        # we could prompt the user to select one, but this should be handled in the UI
+        return self.config['default_config'] is not None
+
     def update_provider(self, name: str) -> bool:
         """
         Update models for a provider.

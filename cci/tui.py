@@ -31,7 +31,7 @@ class ConfigTUI:
             while True:
                 self._show_main_menu()
                 choice = Prompt.ask("[bold cyan]Select an option[/bold cyan]",
-                                    choices=["1", "2", "3", "4", "5", "6", "q", "Q"])
+                                    choices=["1", "2", "3", "4", "5", "6", "7", "q", "Q"])
 
                 if choice.lower() == 'q':
                     self.console.print("[green]Goodbye![/green]")
@@ -48,6 +48,8 @@ class ConfigTUI:
                     self._list_configs()
                 elif choice == "6":
                     self._set_default_config()
+                elif choice == "7":
+                    self._delete_config()
         else:
             # Use inquirer for arrow key navigation in normal operation
             while True:
@@ -65,6 +67,7 @@ class ConfigTUI:
                                       'Create Config',
                                       'List Configs',
                                       'Set Default Config',
+                                      'Delete Config',
                                       'Quit'
                                   ])
                 ]
@@ -86,6 +89,8 @@ class ConfigTUI:
                     self._list_configs()
                 elif answers['action'] == 'Set Default Config':
                     self._set_default_config()
+                elif answers['action'] == 'Delete Config':
+                    self._delete_config()
 
     def _create_config(self) -> None:
         """Create a new configuration."""
@@ -196,6 +201,7 @@ class ConfigTUI:
         self.console.print("4. Create Config")
         self.console.print("5. List Configs")
         self.console.print("6. Set Default Config")
+        self.console.print("7. Delete Config")
         self.console.print("Q. Quit")
         self.console.print()
 
@@ -324,15 +330,30 @@ class ConfigTUI:
                              choices=['y', 'n'], default='n')
 
         if confirm.lower() == 'y':
+            # Check if the default config will be deleted
+            default_config_will_be_deleted = False
+            default_config = self.config_manager.config.get('default_config')
+            if default_config and default_config in associated_configs:
+                default_config_will_be_deleted = True
+
             self.config_manager.remove_provider(provider_name)
             self.console.print(f"[green]Provider '{provider_name}' and associated configurations deleted.[/green]")
+
+            # Check if we need to prompt for a new default config
+            if default_config_will_be_deleted:
+                self._check_and_prompt_for_new_default()
         else:
             self.console.print("[yellow]Deletion cancelled.[/yellow]")
 
         Prompt.ask("Press Enter to continue...")
 
-    def _set_default_config(self) -> None:
-        """Set a configuration as the default."""
+    def _set_default_config(self, no_confirm: bool = False) -> None:
+        """
+        Set a configuration as the default.
+
+        :param no_confirm: If True, skip the "Press Enter to continue..." prompt
+        :type no_confirm: bool
+        """
         self.console.clear()
         self.console.print("[bold blue]Set Default Configuration[/bold blue]")
         self.console.print("-" * 30)
@@ -341,7 +362,8 @@ class ConfigTUI:
         configs = self.config_manager.config.get('configs', {})
         if not configs:
             self.console.print("[yellow]No configurations saved. Please create a configuration first.[/yellow]")
-            Prompt.ask("Press Enter to continue...")
+            if not no_confirm:
+                Prompt.ask("Press Enter to continue...")
             return
 
         # List available configurations
@@ -383,7 +405,8 @@ class ConfigTUI:
         # Set the selected configuration as default
         self.config_manager.set_default_config(selected_config)
         self.console.print(f"[green]Configuration '{selected_config}' set as default successfully![/green]")
-        Prompt.ask("Press Enter to continue...")
+        if not no_confirm:
+            Prompt.ask("Press Enter to continue...")
 
     def _list_configs(self) -> None:
         """List all saved configurations."""
@@ -392,3 +415,75 @@ class ConfigTUI:
         self.console.clear()
         display_configs_table(self.config_manager)
         Prompt.ask("Press Enter to continue...")
+
+    def _delete_config(self) -> None:
+        """Delete a saved configuration."""
+        self.console.clear()
+        self.console.print("[bold blue]Delete Configuration[/bold blue]")
+        self.console.print("-" * 25)
+
+        configs = self.config_manager.config.get('configs', {})
+        if not configs:
+            self.console.print("[yellow]No configurations saved.[/yellow]")
+            Prompt.ask("Press Enter to continue...")
+            return
+
+        # List configurations for selection
+        config_names = list(configs.keys())
+        for i, name in enumerate(config_names, 1):
+            is_default = " ([bold green]*default[/bold green])" if name == self.config_manager.config.get(
+                'default_config') else ""
+            self.console.print(f"{i}. {name}{is_default}")
+
+        # Get user choice
+        choice = Prompt.ask("[bold cyan]Enter configuration number to delete[/bold cyan] (or 'q' to cancel)",
+                            choices=[str(i) for i in range(1, len(config_names) + 1)] + ['q'])
+
+        if choice.lower() == 'q':
+            return
+
+        # Delete the selected configuration
+        config_index = int(choice) - 1
+        config_name = config_names[config_index]
+
+        # Check if this is the default config
+        is_default = config_name == self.config_manager.config.get('default_config')
+        if is_default:
+            self.console.print("[bold yellow]Warning:[/bold yellow] This is the current default configuration.")
+
+        # Confirm deletion
+        confirm = Prompt.ask(f"[bold red]Are you sure you want to delete '{config_name}'?[/bold red] (y/N)",
+                             choices=['y', 'n'], default='n')
+
+        if confirm.lower() == 'y':
+            success = self.config_manager.remove_config(config_name)
+            if success:
+                self.console.print(f"[green]Configuration '{config_name}' deleted.[/green]")
+
+                # Check if we need to prompt for a new default config
+                if is_default:
+                    self._check_and_prompt_for_new_default()
+            else:
+                self.console.print(f"[red]Failed to delete configuration '{config_name}'.[/red]")
+        else:
+            self.console.print("[yellow]Deletion cancelled.[/yellow]")
+
+        Prompt.ask("Press Enter to continue...")
+
+    def _check_and_prompt_for_new_default(self) -> None:
+        """Check if there are other configs available and set default automatically or prompt user."""
+        configs = self.config_manager.config.get('configs', {})
+        if configs:
+            if len(configs) == 1:
+                # Automatically set the only available config as default
+                config_name = list(configs.keys())[0]
+                self.config_manager.set_default_config(config_name)
+                self.console.print(f"[green]Configuration '{config_name}' automatically set as default.[/green]")
+            else:
+                # Multiple configs available, prompt user to select one
+                self.console.print("[yellow]The default configuration has been deleted.[/yellow]")
+                self.console.print("[bold yellow]You must select a new default configuration:[/bold yellow]")
+                self._set_default_config(no_confirm=True)
+        else:
+            self.console.print("[red]No configurations available. Exiting with error.[/red]")
+            sys.exit(1)
