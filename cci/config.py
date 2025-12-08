@@ -77,9 +77,17 @@ class ConfigManager:
         :rtype: bool
         """
         try:
-            # Fetch models from the provider
-            models_data = fetch_models(base_url)
-            model_list = list_models(base_url) if models_data else []
+            # Determine the actual API key value based on the API key type
+            actual_api_key = ""
+            if api_key_type == 'direct':
+                actual_api_key = api_key
+            elif api_key_type == 'envvar':
+                import os
+                actual_api_key = os.environ.get(api_key, '')
+
+            # Fetch models from the provider using the API key for authentication
+            models_data = fetch_models(base_url, actual_api_key)
+            model_list = list_models(base_url, actual_api_key) if models_data else []
 
             # Add provider to config
             self.config['providers'][name] = {
@@ -171,9 +179,19 @@ class ConfigManager:
         try:
             provider = self.config['providers'][name]
             base_url = provider['base_url']
+            api_key = provider.get('api_key', '')
+            api_key_type = provider.get('api_key_type', 'none')
 
-            # Fetch updated models
-            model_list = list_models(base_url)
+            # Determine the actual API key value based on the API key type
+            actual_api_key = ""
+            if api_key_type == 'direct':
+                actual_api_key = api_key
+            elif api_key_type == 'envvar':
+                import os
+                actual_api_key = os.environ.get(api_key, '')
+
+            # Fetch updated models using the API key for authentication
+            model_list = list_models(base_url, actual_api_key)
 
             # Update provider models
             self.config['providers'][name]['models'] = model_list

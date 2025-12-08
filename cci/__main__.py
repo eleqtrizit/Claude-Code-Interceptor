@@ -101,7 +101,7 @@ def handle_help_passthrough(passthrough_args, cci_args):
     # Pass through to get Claude CLI help
     try:
         cmd = ['claude'] + passthrough_args
-        result = subprocess.run(cmd, capture_output=True, text=True)
+        result = subprocess.run(cmd, capture_output=True, text=True, env=env_vars)
         print(result.stdout)
         if result.stderr:
             print(result.stderr, file=sys.stderr)
@@ -127,21 +127,23 @@ def launch_claude_cli(passthrough_args, cci_args):
 
     # Display environment variables and command
     display_env_vars_and_command(env_vars, passthrough_args)
+    full_env = os.environ.copy()
+    full_env |= env_vars
+
+    full_env["ANTHROPIC_AUTH_TOKEN"] = full_env.get("ANTHROPIC_API_KEY", "")
 
     # Pass arguments to Claude Code CLI
     try:
-        if passthrough_args:
-            result = subprocess.run(['claude'] + passthrough_args)
-        else:
-            # Launch Claude CLI with no arguments (starts interactive session)
-            # We need to preserve the current environment and add our variables
-            full_env = os.environ.copy()
-            full_env.update(env_vars)
-
-            # Use subprocess with explicit stdin/stdout/stderr inheritance
-            # This should preserve the TTY connection when run from a real terminal
-            result = subprocess.run(['claude'], env=full_env,
-                                    stdin=sys.stdin, stdout=sys.stdout, stderr=sys.stderr)
+        # Launch Claude CLI with no arguments (starts interactive session)
+        # We need to preserve the current environment and add our variables
+        # Use subprocess with explicit stdin/stdout/stderr inheritance
+        # This should preserve the TTY connection when run from a real terminal
+        result = subprocess.run(
+            ['claude'] + passthrough_args,
+            env=full_env,
+            stdin=sys.stdin,
+            stdout=sys.stdout,
+            stderr=sys.stderr)
         sys.exit(result.returncode)
     except FileNotFoundError:
         print("Error: Claude Code CLI ('claude') not found. Please ensure it's installed and in your PATH.")

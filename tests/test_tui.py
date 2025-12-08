@@ -463,8 +463,8 @@ class TestConfigTUI(unittest.TestCase):
             mock_ph_instance.get_input.assert_any_call("Enter base URL")
             mock_ph_instance.select_option.assert_called_with(
                 "Set API Key", ["Enter API Key", "Use environment variable", "No API Key needed"])
-            mock_fetch_models.assert_called_with('http://test.com')
-            mock_list_models.assert_called_with('http://test.com')
+            mock_fetch_models.assert_called_with('http://test.com', '')
+            mock_list_models.assert_called_with('http://test.com', '')
             mock_cm_instance.add_provider.assert_called_with('test_provider', 'http://test.com', '', 'none')
             mock_ph_instance.print_message.assert_called()
             mock_ph_instance.wait_for_continue.assert_called()

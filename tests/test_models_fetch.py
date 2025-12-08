@@ -47,7 +47,7 @@ def test_discover_models_endpoint_fallback():
     """Test discover_models_endpoint falling back to /models."""
     with patch('requests.get') as mock_get:
         # Mock failure for /v1/models and success for /models
-        def side_effect(url, timeout=None):
+        def side_effect(url, **kwargs):
             mock_response = Mock()
             if url == "http://example.com/v1/models":
                 raise requests.RequestException("Connection failed")

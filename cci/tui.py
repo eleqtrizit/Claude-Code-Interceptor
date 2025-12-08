@@ -645,33 +645,16 @@ class ConfigTUI:
         # Validate the provider by fetching models
         self.prompt_handler.print_message("Validating provider...", "yellow")
         try:
-            # For providers requiring API key, we might need to temporarily set it
-            # in environment variables for validation
-            temp_env = {}
+            # Determine the actual API key value for validation
+            actual_api_key = ""
             if api_key_type == "direct":
-                temp_env['ANTHROPIC_API_KEY'] = api_key
+                actual_api_key = api_key
             elif api_key_type == "envvar":
-                temp_env['ANTHROPIC_API_KEY'] = os.environ.get(api_key, '')
+                actual_api_key = os.environ.get(api_key, '')
 
-            # Temporarily set environment variables for validation
-            original_env: dict[str, Optional[str]] = {}
-            for key, value in temp_env.items():
-                original_env[key] = os.environ.get(key)
-                if value:
-                    # Ensure we're setting a string value
-                    os.environ[key] = str(value or '')
-
-            try:
-                models_data = fetch_models(base_url)
-                model_list = list_models(base_url) if models_data else []
-            finally:
-                # Restore original environment
-                for key, value in original_env.items():
-                    if value is None:
-                        os.environ.pop(key, None)
-                    else:
-                        # Ensure we're setting a string value
-                        os.environ[key] = str(value or '')
+            # Fetch models using the API key for authentication
+            models_data = fetch_models(base_url, actual_api_key)
+            model_list = list_models(base_url, actual_api_key) if models_data else []
 
             if not model_list:
                 self.prompt_handler.print_message("No models found, not saving provider", "red")

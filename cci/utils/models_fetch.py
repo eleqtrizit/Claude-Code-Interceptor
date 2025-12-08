@@ -33,17 +33,26 @@ def normalize_base_url(base_url: str) -> str:
     return base_url
 
 
-def discover_models_endpoint(base_url: str) -> Optional[str]:
+def discover_models_endpoint(base_url: str, api_key: Optional[str] = None) -> Optional[str]:
     """
     Discover the models endpoint by trying different paths.
 
     :param base_url: The base URL to test
     :type base_url: str
+    :param api_key: Optional API key for authentication
+    :type api_key: Optional[str]
     :return: The working models endpoint URL or None if not found
     :rtype: Optional[str]
     """
     # Normalize the base URL first
     normalized_base = normalize_base_url(base_url)
+
+    # Prepare headers with API key if provided
+    headers = {}
+    if api_key:
+        # Send both headers for compatibility with different providers
+        headers['Authorization'] = f'Bearer {api_key}'
+        headers['x-api-key'] = api_key
 
     # Test paths in order of preference
     test_paths = [
@@ -54,7 +63,7 @@ def discover_models_endpoint(base_url: str) -> Optional[str]:
     for path in test_paths:
         endpoint_url = urljoin(normalized_base + '/', path.lstrip('/'))
         try:
-            response = requests.get(endpoint_url, timeout=10)
+            response = requests.get(endpoint_url, headers=headers, timeout=10)
             # Check if the response is successful
             if response.status_code == 200:
                 return endpoint_url
@@ -65,39 +74,50 @@ def discover_models_endpoint(base_url: str) -> Optional[str]:
     return None
 
 
-def fetch_models(base_url: str) -> Optional[Dict]:
+def fetch_models(base_url: str, api_key: Optional[str] = None) -> Optional[Dict]:
     """
     Fetch models from the /v1/models endpoint.
 
     :param base_url: The base URL to fetch models from
     :type base_url: str
+    :param api_key: Optional API key for authentication
+    :type api_key: Optional[str]
     :return: Dictionary containing models data or None if failed
     :rtype: Optional[Dict]
     """
     # Discover the correct models endpoint
-    models_endpoint = discover_models_endpoint(base_url)
+    models_endpoint = discover_models_endpoint(base_url, api_key)
 
     if not models_endpoint:
         return None
 
+    # Prepare headers with API key if provided
+    headers = {}
+    if api_key:
+        # Send both headers for compatibility with different providers
+        headers['Authorization'] = f'Bearer {api_key}'
+        headers['x-api-key'] = api_key
+
     try:
-        response = requests.get(models_endpoint, timeout=10)
+        response = requests.get(models_endpoint, headers=headers, timeout=10)
         response.raise_for_status()
         return response.json()
     except requests.RequestException:
         return None
 
 
-def list_models(base_url: str) -> List[str]:
+def list_models(base_url: str, api_key: Optional[str] = None) -> List[str]:
     """
     List available models from the API endpoint.
 
     :param base_url: The base URL of the API
     :type base_url: str
+    :param api_key: Optional API key for authentication
+    :type api_key: Optional[str]
     :return: List of model names
     :rtype: List[str]
     """
-    models_data = fetch_models(base_url)
+    models_data = fetch_models(base_url, api_key)
 
     if not models_data:
         return []

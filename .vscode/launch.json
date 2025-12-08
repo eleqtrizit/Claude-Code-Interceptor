@@ -12,6 +12,17 @@
             "justMyCode": false
         },
         {
+            "name": "cci print",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "cci",
+            "args": [
+                "-p",
+                "hello"
+            ],
+            "justMyCode": false
+        },
+        {
             "name": "use config",
             "type": "debugpy",
             "request": "launch",

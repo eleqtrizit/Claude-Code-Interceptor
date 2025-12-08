@@ -22,6 +22,8 @@ def display_env_vars_and_command(env_vars: Dict[str, str], command_args: List[st
     if env_vars:
         console.print("[bold blue]Environment Variables:[/bold blue]")
         for key, value in env_vars.items():
+            if key == "ANTHROPIC_API_KEY":
+                value = f"****{value[-4:]}"
             console.print(f"  {key}={value}")
         console.print()
 
