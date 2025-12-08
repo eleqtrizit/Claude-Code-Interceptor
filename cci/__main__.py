@@ -183,7 +183,6 @@ def main():
         try:
             # Use subprocess with explicit stdin/stdout/stderr inheritance
             # This should preserve the TTY connection when run from a real terminal
-            import subprocess
             result = subprocess.run(['claude'], env=full_env,
                                     stdin=sys.stdin, stdout=sys.stdout, stderr=sys.stderr)
             sys.exit(result.returncode)

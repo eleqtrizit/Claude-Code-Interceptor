@@ -9,6 +9,7 @@ wheels/
 .pytest_cache
 .claude
 .python-version
+.coverage
 
 # Virtual environments
 .env
