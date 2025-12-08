@@ -3,6 +3,7 @@ import subprocess
 import sys
 
 from cci.utils.display import display_env_vars_and_command
+from cci.utils.version import get_project_version
 
 
 def load_configuration(cci_args):
@@ -56,12 +57,19 @@ def load_configuration(cci_args):
 
 def handle_version_command():
     """Handle the --cci-version command."""
-    print("Claude Code Interceptor v0.1.1")
+    version = get_project_version()
+    if version:
+        print(f"Claude Code Interceptor v{version}")
+    else:
+        print("Claude Code Interceptor vUnknown")
 
 
 def handle_help_command():
     """Handle the --cci-help command."""
-    print("Claude Code Interceptor v0.1.1")
+    version = get_project_version()
+    version_str = f"v{version}" if version else "vUnknown"
+
+    print(f"Claude Code Interceptor {version_str}")
     print("A wrapper for Claude Code CLI")
     print("")
     print("Usage: cci [OPTIONS] [CLAUD_ARGS]...")
