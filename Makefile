@@ -13,11 +13,11 @@ test:  ## Run tests
 	pytest tests/ -v
 
 cov:  ## Run tests with coverage report
-	pytest tests/ --cov=claude_code_intercept --cov-report=term-missing --cov-report=html
+	pytest tests/ --cov=cci --cov-report=term-missing --cov-report=html
 
 lint:  ## Run linters
-	flake8 claude_code_intercept/ tests/
-	mypy claude_code_intercept/ tests/
+	flake8 cci/ tests/
+	mypy cci/ tests/
 
 format:  ## Format code
 	autopep8 -a  --in-place --recursive .

@@ -56,6 +56,8 @@ class ConfigTUI:
                 self.console.clear()
                 self.console.print("[bold blue]Claude Code Interceptor Configuration[/bold blue]")
                 self.console.print("=" * 40)
+                self.console.print("[dim](Press Ctrl+C at any time to quit)[/dim]")
+                self.console.print()
 
                 questions = [
                     inquirer.List('action',
@@ -72,25 +74,34 @@ class ConfigTUI:
                                   ])
                 ]
 
-                answers = inquirer.prompt(questions)
+                try:
+                    answers = inquirer.prompt(questions)
 
-                if answers is None or answers['action'] == 'Quit':
-                    self.console.print("[green]Goodbye![/green]")
+                    if answers is None:
+                        # This can happen if the prompt is interrupted or cancelled
+                        self.console.print("[green]Goodbye![/green]")
+                        sys.exit(0)
+
+                    if answers['action'] == 'Quit':
+                        self.console.print("[green]Goodbye![/green]")
+                        sys.exit(0)
+                    elif answers['action'] == 'Add Provider':
+                        self._add_provider()
+                    elif answers['action'] == 'List Providers':
+                        self._list_providers()
+                    elif answers['action'] == 'Delete Provider':
+                        self._delete_provider()
+                    elif answers['action'] == 'Create Config':
+                        self._create_config()
+                    elif answers['action'] == 'List Configs':
+                        self._list_configs()
+                    elif answers['action'] == 'Set Default Config':
+                        self._set_default_config()
+                    elif answers['action'] == 'Delete Config':
+                        self._delete_config()
+                except KeyboardInterrupt:
+                    self.console.print("\n[green]Goodbye![/green]")
                     sys.exit(0)
-                elif answers['action'] == 'Add Provider':
-                    self._add_provider()
-                elif answers['action'] == 'List Providers':
-                    self._list_providers()
-                elif answers['action'] == 'Delete Provider':
-                    self._delete_provider()
-                elif answers['action'] == 'Create Config':
-                    self._create_config()
-                elif answers['action'] == 'List Configs':
-                    self._list_configs()
-                elif answers['action'] == 'Set Default Config':
-                    self._set_default_config()
-                elif answers['action'] == 'Delete Config':
-                    self._delete_config()
 
     def _create_config(self) -> None:
         """Create a new configuration."""
@@ -126,11 +137,15 @@ class ConfigTUI:
                               choices=provider_names)
             ]
 
-            provider_answers = inquirer.prompt(provider_questions)
-            if provider_answers is None:
-                return
+            try:
+                provider_answers = inquirer.prompt(provider_questions)
+                if provider_answers is None:
+                    return
 
-            selected_provider = provider_answers['provider']
+                selected_provider = provider_answers['provider']
+            except KeyboardInterrupt:
+                self.console.print("\n[green]Goodbye![/green]")
+                sys.exit(0)
 
         # Step 2: Select models for Haiku, Sonnet, and Opus
         available_models = self.config_manager.get_available_models(selected_provider)
@@ -161,11 +176,15 @@ class ConfigTUI:
                                   choices=['None'] + available_models)
                 ]
 
-                model_answers = inquirer.prompt(model_questions)
-                if model_answers is None:
-                    return
+                try:
+                    model_answers = inquirer.prompt(model_questions)
+                    if model_answers is None:
+                        return
 
-                selected_model = model_answers['model']
+                    selected_model = model_answers['model']
+                except KeyboardInterrupt:
+                    self.console.print("\n[green]Goodbye![/green]")
+                    sys.exit(0)
 
             if selected_model != 'None':
                 selected_models[model_type] = selected_model
@@ -395,12 +414,16 @@ class ConfigTUI:
                               choices=choices)
             ]
 
-            config_answers = inquirer.prompt(config_questions)
-            if config_answers is None:
-                return
+            try:
+                config_answers = inquirer.prompt(config_questions)
+                if config_answers is None:
+                    return
 
-            # Extract the config name (remove the default marker if present)
-            selected_config = config_answers['config'].split(" (*default)")[0]
+                # Extract the config name (remove the default marker if present)
+                selected_config = config_answers['config'].split(" (*default)")[0]
+            except KeyboardInterrupt:
+                self.console.print("\n[green]Goodbye![/green]")
+                sys.exit(0)
 
         # Set the selected configuration as default
         self.config_manager.set_default_config(selected_config)
