@@ -180,13 +180,9 @@ class InquirerPromptHandler(PromptHandler):
             self.console.print(message)
 
     def wait_for_continue(self) -> None:
-        questions = [
-            inquirer.Confirm('continue',
-                             message="Press Enter to continue",
-                             default=True)
-        ]
+        # Simply wait for user to press Enter
         try:
-            inquirer.prompt(questions)
+            input("Press Enter to continue...")
         except KeyboardInterrupt:
             self.console.print("\n[green]Goodbye![/green]")
             sys.exit(0)
@@ -273,7 +269,12 @@ class TestPromptHandler(PromptHandler):
             self.console.print(message)
 
     def wait_for_continue(self) -> None:
-        Prompt.ask("Press Enter to continue...")
+        # Simply wait for user to press Enter
+        try:
+            input("Press Enter to continue...")
+        except KeyboardInterrupt:
+            self.console.print("\n[green]Goodbye![/green]")
+            sys.exit(0)
 
 
 def get_prompt_handler(console: Console) -> PromptHandler:
