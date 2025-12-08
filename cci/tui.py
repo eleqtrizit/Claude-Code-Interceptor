@@ -127,11 +127,8 @@ class ConfigTUI:
 
             selected_provider = provider_answers['provider']
 
-        # Set the selected provider as current
-        self.config_manager.set_current_provider(selected_provider)
-
         # Step 2: Select models for Haiku, Sonnet, and Opus
-        available_models = self.config_manager.get_available_models()
+        available_models = self.config_manager.get_available_models(selected_provider)
         if not available_models:
             self.console.print("[yellow]No models available for the selected provider.[/yellow]")
             Prompt.ask("Press Enter to continue...")
@@ -183,7 +180,7 @@ class ConfigTUI:
         normalized_name = normalize_config_name(config_name)
 
         # Save the configuration
-        self.config_manager.save_config_as(normalized_name)
+        self.config_manager.save_config_as(normalized_name, selected_provider)
 
         self.console.print(f"[green]Configuration '{normalized_name}' created successfully![/green]")
         Prompt.ask("Press Enter to continue...")
@@ -254,14 +251,11 @@ class ConfigTUI:
         self.console.print("-" * 25)
 
         providers = self.config_manager.config.get('providers', {})
-        current_provider = self.config_manager.config.get('current_provider')
-
         if not providers:
             self.console.print("[yellow]No providers configured.[/yellow]")
         else:
             for name, provider in providers.items():
-                is_current = " ([bold green]*current[/bold green])" if name == current_provider else ""
-                self.console.print(f"[bold]{name}{is_current}[/bold]")
+                self.console.print(f"[bold]{name}[/bold]")
                 self.console.print(f"  URL: {provider['base_url']}")
                 self.console.print(f"  Models: {len(provider['models'])}")
                 if provider['models']:
@@ -290,8 +284,7 @@ class ConfigTUI:
         # List providers for selection
         provider_names = list(providers.keys())
         for i, name in enumerate(provider_names, 1):
-            is_current = " (*current)" if name == self.config_manager.config.get('current_provider') else ""
-            self.console.print(f"{i}. {name}{is_current}")
+            self.console.print(f"{i}. {name}")
 
         # Get user choice
         choice = Prompt.ask("[bold cyan]Enter provider number to delete[/bold cyan] (or 'q' to cancel)",

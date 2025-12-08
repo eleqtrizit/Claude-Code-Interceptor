@@ -49,7 +49,6 @@ class ConfigManager:
         # Return default config
         return {
             'providers': {},
-            'current_provider': None,
             'models': {
                 'haiku': None,
                 'sonnet': None,
@@ -87,9 +86,8 @@ class ConfigManager:
                 'models': model_list
             }
 
-            # Set as current provider if none exists
-            if self.config['current_provider'] is None:
-                self.config['current_provider'] = name
+            # No automatic setting needed
+            pass
 
             self.save_config()
             return True
@@ -116,15 +114,8 @@ class ConfigManager:
 
             del self.config['providers'][name]
 
-            # Reset current provider if it was the one removed
-            if self.config['current_provider'] == name:
-                self.config['current_provider'] = None
-                # Clear model selections
-                self.config['models'] = {
-                    'haiku': None,
-                    'sonnet': None,
-                    'opus': None
-                }
+            # No reset needed since we're removing the concept
+            pass
 
             self.save_config()
 
@@ -172,34 +163,6 @@ class ConfigManager:
 
         return associated_configs
 
-    def set_current_provider(self, name: str) -> bool:
-        """
-        Set the current provider.
-
-        :param name: Name of the provider to set as current
-        :type name: str
-        :return: True if successful, False otherwise
-        :rtype: bool
-        """
-        if name not in self.config['providers']:
-            return False
-
-        self.config['current_provider'] = name
-        self.save_config()
-        return True
-
-    def get_current_provider(self) -> Optional[Dict[str, Any]]:
-        """
-        Get the current provider.
-
-        :return: Current provider information or None
-        :rtype: Optional[Dict[str, Any]]
-        """
-        if self.config['current_provider'] is None:
-            return None
-
-        return self.config['providers'].get(self.config['current_provider'])
-
     def set_model(self, model_type: str, model_name: Optional[str]) -> bool:
         """
         Set a model for a specific type.
@@ -227,29 +190,32 @@ class ConfigManager:
         """
         return self.config['models']
 
-    def get_available_models(self) -> List[str]:
+    def get_available_models(self, provider_name: str) -> List[str]:
         """
-        Get list of available models from current provider.
+        Get list of available models from a specific provider.
 
+        :param provider_name: Name of the provider
+        :type provider_name: str
         :return: List of available model names
         :rtype: List[str]
         """
-        provider = self.get_current_provider()
-        if provider is None:
+        if provider_name not in self.config['providers']:
             return []
 
-        return provider.get('models', [])
+        return self.config['providers'][provider_name].get('models', [])
 
-    def save_config_as(self, name: str) -> None:
+    def save_config_as(self, name: str, provider_name: str) -> None:
         """
         Save current configuration with a name.
 
         :param name: Name to save configuration as
         :type name: str
+        :param provider_name: Name of the provider to associate with this config
+        :type provider_name: str
         """
         normalized_name = normalize_config_name(name)
         self.config['configs'][normalized_name] = {
-            'provider': self.config['current_provider'],
+            'provider': provider_name,
             'models': self.config['models'].copy()
         }
         self.save_config()
@@ -267,7 +233,6 @@ class ConfigManager:
             return False
 
         config = self.config['configs'][name]
-        self.config['current_provider'] = config['provider']
         self.config['models'] = config['models'].copy()
         self.save_config()
         return True
@@ -294,18 +259,20 @@ class ConfigManager:
 
         return self.load_config_by_name(self.config['default_config'])
 
-    def get_environment_variables(self) -> Dict[str, str]:
+    def get_environment_variables(self, provider_name: Optional[str] = None) -> Dict[str, str]:
         """
         Get environment variables based on current configuration.
 
+        :param provider_name: Optional name of provider to use for base URL
+        :type provider_name: Optional[str]
         :return: Dictionary of environment variables
         :rtype: Dict[str, str]
         """
         env_vars = {}
 
-        # Get current provider
-        provider = self.get_current_provider()
-        if provider is not None:
+        # Get provider by name if specified
+        if provider_name and provider_name in self.config['providers']:
+            provider = self.config['providers'][provider_name]
             env_vars['ANTHROPIC_BASE_URL'] = provider['base_url']
 
             # Unset AUTH_TOKEN if it exists in environment

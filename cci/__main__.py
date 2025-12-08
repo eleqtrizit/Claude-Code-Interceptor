@@ -42,7 +42,8 @@ def load_configuration(cci_args):
             config_manager.load_default_config()
 
         # Get environment variables from configuration
-        env_vars = config_manager.get_environment_variables()
+        # For now, we don't have a specific provider to use, so we pass None
+        env_vars = config_manager.get_environment_variables(None)
 
         # Apply configuration to environment
         apply_configuration(env_vars)
