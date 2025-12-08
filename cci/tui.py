@@ -31,7 +31,7 @@ class ConfigTUI:
             while True:
                 self._show_main_menu()
                 choice = Prompt.ask("[bold cyan]Select an option[/bold cyan]",
-                                    choices=["1", "2", "3", "4", "5", "q", "Q"])
+                                    choices=["1", "2", "3", "4", "5", "6", "q", "Q"])
 
                 if choice.lower() == 'q':
                     self.console.print("[green]Goodbye![/green]")
@@ -45,6 +45,8 @@ class ConfigTUI:
                 elif choice == "4":
                     self._create_config()
                 elif choice == "5":
+                    self._list_configs()
+                elif choice == "6":
                     self._set_default_config()
         else:
             # Use inquirer for arrow key navigation in normal operation
@@ -61,6 +63,7 @@ class ConfigTUI:
                                       'List Providers',
                                       'Delete Provider',
                                       'Create Config',
+                                      'List Configs',
                                       'Set Default Config',
                                       'Quit'
                                   ])
@@ -79,6 +82,8 @@ class ConfigTUI:
                     self._delete_provider()
                 elif answers['action'] == 'Create Config':
                     self._create_config()
+                elif answers['action'] == 'List Configs':
+                    self._list_configs()
                 elif answers['action'] == 'Set Default Config':
                     self._set_default_config()
 
@@ -192,7 +197,8 @@ class ConfigTUI:
         self.console.print("2. List Providers")
         self.console.print("3. Delete Provider")
         self.console.print("4. Create Config")
-        self.console.print("5. Set Default Config")
+        self.console.print("5. List Configs")
+        self.console.print("6. Set Default Config")
         self.console.print("Q. Quit")
         self.console.print()
 
@@ -384,4 +390,12 @@ class ConfigTUI:
         # Set the selected configuration as default
         self.config_manager.set_default_config(selected_config)
         self.console.print(f"[green]Configuration '{selected_config}' set as default successfully![/green]")
+        Prompt.ask("Press Enter to continue...")
+
+    def _list_configs(self) -> None:
+        """List all saved configurations."""
+        from cci.utils.display import display_configs_table
+
+        self.console.clear()
+        display_configs_table(self.config_manager)
         Prompt.ask("Press Enter to continue...")
