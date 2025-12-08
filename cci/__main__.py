@@ -167,7 +167,7 @@ def main():
             print("Error: Claude Code CLI ('claude') not found. Please ensure it's installed and in your PATH.")
             sys.exit(1)
         return
-    # If no arguments at all, just show interceptor message
+    # If no arguments at all, start interactive Claude session with default config
     elif not passthrough_args and not cci_args:
         # Apply configuration to get environment variables
         env_vars = load_configuration(cci_args)
@@ -175,9 +175,24 @@ def main():
         # Display environment variables
         display_env_vars_and_command(env_vars, [])
 
-        print("Claude Code Interceptor v0.1.0")
-        print("Passing through to Claude Code CLI...")
-        print("Use --help to see available commands.")
+        # Launch Claude CLI with no arguments (starts interactive session)
+        # We need to preserve the current environment and add our variables
+        full_env = os.environ.copy()
+        full_env.update(env_vars)
+
+        try:
+            # Use subprocess with explicit stdin/stdout/stderr inheritance
+            # This should preserve the TTY connection when run from a real terminal
+            import subprocess
+            result = subprocess.run(['claude'], env=full_env,
+                                    stdin=sys.stdin, stdout=sys.stdout, stderr=sys.stderr)
+            sys.exit(result.returncode)
+        except FileNotFoundError:
+            print("Error: Claude Code CLI ('claude') not found. Please ensure it's installed and in your PATH.")
+            sys.exit(1)
+        except KeyboardInterrupt:
+            # Handle Ctrl+C gracefully
+            sys.exit(0)
         return
 
     # Apply configuration before launching Claude CLI
