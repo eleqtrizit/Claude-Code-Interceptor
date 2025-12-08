@@ -1,7 +1,8 @@
 """Configuration management for Claude Code Interceptor."""
 
+
+import contextlib
 import json
-import os
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -39,13 +40,9 @@ class ConfigManager:
 
         # Load config file if it exists
         if self.config_file.exists():
-            try:
+            with contextlib.suppress(json.JSONDecodeError, IOError):
                 with open(self.config_file, 'r') as f:
                     return json.load(f)
-            except (json.JSONDecodeError, IOError):
-                # Return default config if file is corrupted
-                pass
-
         # Return default config
         return {
             'providers': {},
@@ -86,9 +83,6 @@ class ConfigManager:
                 'models': model_list
             }
 
-            # No automatic setting needed
-            pass
-
             self.save_config()
             return True
         except Exception:
@@ -113,10 +107,7 @@ class ConfigManager:
                         self.config['default_config'] = None
 
             del self.config['providers'][name]
-
-            # No reset needed since we're removing the concept
-            pass
-
+            self.set_default_if_just_one_config()
             self.save_config()
 
     def remove_config(self, name: str) -> bool:
@@ -260,22 +251,33 @@ class ConfigManager:
         }
         self.save_config()
 
-    def load_config_by_name(self, name: str) -> bool:
+    def load_config_by_name(self, name: str) -> dict:
         """
         Load a saved configuration by name.
 
         :param name: Name of configuration to load
         :type name: str
-        :return: True if successful, False otherwise
-        :rtype: bool
+        :return: Dictionary of provider base URL and models, or empty dict if not found
+        :rtype: dict
         """
         if name not in self.config['configs']:
-            return False
+            return {}
 
-        config = self.config['configs'][name]
-        self.config['models'] = config['models'].copy()
-        self.save_config()
-        return True
+        provider = self.config['configs'][name]['provider']
+
+        return {
+            'base_url': self.config['providers'][provider]['base_url'],
+            'models': self.config['configs'][name]['models']
+        }
+
+    def get_default_config_name(self) -> Optional[str]:
+        """
+        Get the name of the default configuration.
+
+        :return: Name of the default configuration or None if not set
+        :rtype: Optional[str]
+        """
+        return self.config.get('default_config')
 
     def set_default_config(self, name: str) -> None:
         """
@@ -287,50 +289,32 @@ class ConfigManager:
         self.config['default_config'] = name
         self.save_config()
 
-    def load_default_config(self) -> bool:
+    def set_default_if_just_one_config(self) -> None:
         """
-        Load the default configuration.
-
-        :return: True if successful, False otherwise
-        :rtype: bool
+        If there is only one saved configuration, set it as the default.
         """
-        if self.config['default_config'] is None:
-            return False
+        if len(self.config['configs']) == 1:
+            only_config_name = list(self.config['configs'].keys())[0]
+            self.config['default_config'] = only_config_name
+            self.save_config()
 
-        return self.load_config_by_name(self.config['default_config'])
-
-    def get_environment_variables(self, provider_name: Optional[str] = None) -> Dict[str, str]:
+    def get_environment_variables(self, config: dict) -> Dict[str, str]:
         """
         Get environment variables based on current configuration.
 
-        :param provider_name: Optional name of provider to use for base URL
-        :type provider_name: Optional[str]
+        :param config: Configuration dictionary
+        :type config: dict
         :return: Dictionary of environment variables
         :rtype: Dict[str, str]
         """
-        env_vars = {}
-
-        # Get provider by name if specified
-        if provider_name and provider_name in self.config['providers']:
-            provider = self.config['providers'][provider_name]
-            env_vars['ANTHROPIC_BASE_URL'] = provider['base_url']
-
-            # Unset AUTH_TOKEN if it exists in environment
-            if 'ANTHROPIC_AUTH_TOKEN' in os.environ:
-                env_vars['ANTHROPIC_AUTH_TOKEN'] = ''
-
-        # Set model environment variables
-        models = self.get_models()
-        if models['haiku']:
-            env_vars['ANTHROPIC_DEFAULT_HAIKU_MODEL'] = models['haiku']
-        if models['sonnet']:
-            env_vars['ANTHROPIC_DEFAULT_SONNET_MODEL'] = models['sonnet']
-        if models['opus']:
-            env_vars['ANTHROPIC_DEFAULT_OPUS_MODEL'] = models['opus']
-
-        env_vars['ANTHROPIC_API_KEY'] = ""
-
-        return env_vars
+        return {
+            'ANTHROPIC_DEFAULT_HAIKU_MODEL': config['models']['haiku'],
+            'ANTHROPIC_DEFAULT_SONNET_MODEL': config['models']['sonnet'],
+            'ANTHROPIC_DEFAULT_OPUS_MODEL': config['models']['opus'],
+            'ANTHROPIC_BASE_URL': config['base_url'],
+            'ANTHROPIC_API_KEY': "",
+            "ANTHROPIC_AUTH_TOKEN": "",
+        }
 
 
 # Convenience functions
@@ -342,18 +326,3 @@ def get_config_manager() -> ConfigManager:
     :rtype: ConfigManager
     """
     return ConfigManager()
-
-
-def apply_configuration(env: Dict[str, str]) -> None:
-    """
-    Apply configuration to environment variables.
-
-    :param env: Environment variables to set
-    :type env: Dict[str, str]
-    """
-    for key, value in env.items():
-        if value == '':
-            # Unset variable if value is empty string
-            os.environ.pop(key, None)
-        else:
-            os.environ[key] = value

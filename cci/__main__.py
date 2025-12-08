@@ -1,3 +1,4 @@
+import contextlib
 import os
 import subprocess
 import sys
@@ -15,44 +16,32 @@ def load_configuration(cci_args):
     :return: Dictionary of environment variables
     :rtype: dict
     """
-    env_vars = {}
-    try:
+    with contextlib.suppress(Exception):
         # Import here to avoid circular imports and unnecessary dependencies
-        from cci.config import apply_configuration, get_config_manager
+        from cci.config import get_config_manager
         config_manager = get_config_manager()
 
         # Check if --cci-use-config is specified
+        config_name = None
         if '--cci-use-config' in cci_args:
             # Find the config name (it should be the next argument after --cci-use-config)
-            config_name = None
             for i, arg in enumerate(cci_args):
                 if arg == '--cci-use-config' and i + 1 < len(cci_args):
                     config_name = cci_args[i + 1]
                     break
 
-            if config_name:
-                # Load the specified configuration
-                if not config_manager.load_config_by_name(config_name):
-                    print(f"Warning: Configuration '{config_name}' not found. Using default configuration.")
-                    config_manager.load_default_config()
-            else:
-                print("Warning: No configuration name provided for --cci-use-config. Using default configuration.")
-                config_manager.load_default_config()
-        else:
-            # Load default configuration if available
-            config_manager.load_default_config()
+        config_manager.set_default_if_just_one_config()
+        if (
+            config_name := config_name
+            or config_manager.get_default_config_name()
+        ):
+            if config := config_manager.load_config_by_name(config_name):
+                return config_manager.get_environment_variables(config)
+            print(f"Error: Configuration '{config_name}' not found.")
+            exit(1)
 
-        # Get environment variables from configuration
-        # For now, we don't have a specific provider to use, so we pass None
-        env_vars = config_manager.get_environment_variables(None)
-
-        # Apply configuration to environment
-        apply_configuration(env_vars)
-    except Exception:
-        # If configuration fails, continue without it
-        pass
-
-    return env_vars
+    print("Error: Set a default model (--cci-config) or use --cci-use-config with a valid configuration name.")
+    exit(1)
 
 
 def handle_version_command():

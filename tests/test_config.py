@@ -6,7 +6,7 @@ from unittest.mock import patch
 
 import pytest
 
-from cci.config import ConfigManager, apply_configuration, get_config_manager
+from cci.config import ConfigManager, get_config_manager
 
 
 class TestConfigManager:
@@ -482,20 +482,3 @@ def test_get_config_manager():
     """Test the get_config_manager convenience function."""
     cm = get_config_manager()
     assert isinstance(cm, ConfigManager)
-
-
-def test_apply_configuration():
-    """Test the apply_configuration function."""
-    test_env = {
-        "TEST_VAR1": "value1",
-        "TEST_VAR2": "value2",
-        "EMPTY_VAR": ""
-    }
-
-    with patch.dict(os.environ, {}, clear=True):
-        apply_configuration(test_env)
-
-        # Check that variables were set
-        assert os.environ["TEST_VAR1"] == "value1"
-        assert os.environ["TEST_VAR2"] == "value2"
-        assert "EMPTY_VAR" not in os.environ
