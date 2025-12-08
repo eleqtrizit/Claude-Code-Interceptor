@@ -1,4 +1,9 @@
-"""Terminal User Interface for Claude Code Interceptor configuration."""
+"""Terminal User Interface for Claude Code Interceptor configuration.
+
+This module provides a text-based user interface for managing Claude Code Interceptor
+configurations. It supports both interactive use (with rich prompts) and automated
+testing environments through dual implementations of prompt handlers.
+"""
 
 import os
 import sys
@@ -20,37 +25,116 @@ class PromptHandler(ABC):
 
     @abstractmethod
     def select_option(self, message: str, choices: List[str], default: Optional[str] = None) -> str:
-        """Select an option from a list of choices."""
+        """Select an option from a list of choices.
+
+        This abstract method is implemented differently by InquirerPromptHandler
+        (for interactive use with arrow key navigation) and TestPromptHandler
+        (for automated testing with simple numeric input) to provide appropriate
+        user experiences for each environment.
+
+        :param message: The message to display to the user
+        :type message: str
+        :param choices: List of available choices
+        :type choices: List[str]
+        :param default: Default choice (optional)
+        :type default: Optional[str]
+        :return: Selected option
+        :rtype: str
+        """
         pass
 
     @abstractmethod
     def select_provider(self, providers: List[str]) -> str:
-        """Select a provider from a list of providers."""
+        """Select a provider from a list of providers.
+
+        This abstract method is implemented differently by InquirerPromptHandler
+        (for interactive use) and TestPromptHandler (for automated testing) to provide
+        appropriate user experiences for each environment.
+
+        :param providers: List of available providers
+        :type providers: List[str]
+        :return: Selected provider name
+        :rtype: str
+        """
         pass
 
     @abstractmethod
     def select_model(self, model_type: str, models: List[str]) -> Optional[str]:
-        """Select a model for a specific type from a list of models."""
+        """Select a model for a specific type from a list of models.
+
+        This abstract method is implemented differently by InquirerPromptHandler
+        (for interactive use) and TestPromptHandler (for automated testing) to provide
+        appropriate user experiences for each environment.
+
+        :param model_type: Type of model (haiku, sonnet, opus)
+        :type model_type: str
+        :param models: List of available models
+        :type models: List[str]
+        :return: Selected model name or None
+        :rtype: Optional[str]
+        """
         pass
 
     @abstractmethod
     def select_config(self, configs: List[str], default_config: Optional[str] = None) -> str:
-        """Select a configuration from a list of configurations."""
+        """Select a configuration from a list of configurations.
+
+        This abstract method is implemented differently by InquirerPromptHandler
+        (for interactive use) and TestPromptHandler (for automated testing) to provide
+        appropriate user experiences for each environment.
+
+        :param configs: List of available configurations
+        :type configs: List[str]
+        :param default_config: Name of default configuration (optional)
+        :type default_config: Optional[str]
+        :return: Selected configuration name
+        :rtype: str
+        """
         pass
 
     @abstractmethod
     def confirm_action(self, message: str, default: str = "n") -> bool:
-        """Confirm an action with the user."""
+        """Confirm an action with the user.
+
+        This abstract method is implemented differently by InquirerPromptHandler
+        (for interactive use) and TestPromptHandler (for automated testing) to provide
+        appropriate user experiences for each environment.
+
+        :param message: Confirmation message to display
+        :type message: str
+        :param default: Default response ('y' or 'n'), defaults to "n"
+        :type default: str, optional
+        :return: True if confirmed, False otherwise
+        :rtype: bool
+        """
         pass
 
     @abstractmethod
     def get_input(self, message: str) -> str:
-        """Get input from the user."""
+        """Get input from the user.
+
+        This abstract method is implemented differently by InquirerPromptHandler
+        (for interactive use) and TestPromptHandler (for automated testing) to provide
+        appropriate user experiences for each environment.
+
+        :param message: Message to display when requesting input
+        :type message: str
+        :return: User input string
+        :rtype: str
+        """
         pass
 
     @abstractmethod
     def show_menu(self) -> str:
-        """Show the main menu and get user selection."""
+        """Show the main menu and get user selection.
+
+        This abstract method is implemented differently by InquirerPromptHandler
+        (for interactive use) and TestPromptHandler (for automated testing) to provide
+        appropriate user experiences for each environment.
+
+        :return: Selected menu option
+        :rtype: str
+        """
         pass
 
     @abstractmethod
@@ -60,17 +144,45 @@ class PromptHandler(ABC):
 
     @abstractmethod
     def print_message(self, message: str, style: str = "") -> None:
-        """Print a message to the console."""
+        """Print a message to the console.
+
+        This abstract method is implemented by both InquirerPromptHandler and TestPromptHandler
+        to provide consistent output formatting across different environments while maintaining
+        their respective styling capabilities.
+
+        :param message: Message to print
+        :type message: str
+        :param style: Style formatting (optional)
+        :type style: str, optional
+        :return: None
+        :rtype: None
+        """
         pass
 
     @abstractmethod
     def wait_for_continue(self) -> None:
-        """Wait for the user to press Enter to continue."""
+        """Wait for the user to press Enter to continue.
+
+        This abstract method is implemented by both InquirerPromptHandler and TestPromptHandler
+        to provide a consistent way to pause execution and wait for user input across different
+        environments.
+
+        :return: None
+        :rtype: None
+        """
         pass
 
 
 class InquirerPromptHandler(PromptHandler):
-    """Prompt handler for normal operation using inquirer."""
+    """Prompt handler for normal operation using inquirer.
+
+    This implementation uses the inquirer library for rich, interactive terminal prompts
+    with features like arrow key navigation and searchable dropdowns. It's designed for
+    optimal user experience in interactive environments.
+
+    Corresponds to TestPromptHandler which provides the same functionality but uses
+    simplified prompts suitable for automated testing environments.
+    """
 
     def __init__(self, console: Console):
         self.console = console
@@ -140,6 +252,16 @@ class InquirerPromptHandler(PromptHandler):
             sys.exit(0)
 
     def show_menu(self) -> str:
+        """Display main menu using inquirer library for interactive selection.
+
+        This implementation provides a rich interactive experience with arrow key navigation
+        and searchable dropdowns, optimized for human users in interactive environments.
+        Corresponds to TestPromptHandler.show_menu() which serves the same purpose but
+        uses simplified prompts for automated testing.
+
+        :return: Selected menu option identifier
+        :rtype: str
+        """
         self.console.clear()
         self.console.print("[bold blue]Claude Code Interceptor Configuration[/bold blue]")
         self.console.print("=" * 40)
@@ -189,7 +311,15 @@ class InquirerPromptHandler(PromptHandler):
 
 
 class TestPromptHandler(PromptHandler):
-    """Prompt handler for testing environment using rich.prompt.Prompt."""
+    """Prompt handler for testing environment using rich.prompt.Prompt.
+
+    This implementation uses rich.prompt.Prompt for simplified input/output handling
+    that's easier to test and automate in CI/CD environments. It's designed for
+    reliability in automated testing scenarios rather than interactive user experience.
+
+    Corresponds to InquirerPromptHandler which provides the same functionality but uses
+    rich interactive prompts suitable for human users in interactive environments.
+    """
 
     def __init__(self, console: Console):
         self.console = console
@@ -243,6 +373,15 @@ class TestPromptHandler(PromptHandler):
         return Prompt.ask(f"[bold cyan]{message}[/bold cyan]")
 
     def show_menu(self) -> str:
+        """Display main menu using rich.prompt.Prompt for simplified input.
+
+        This implementation uses numbered options and simple prompts that are easy to
+        automate in testing environments. Corresponds to InquirerPromptHandler.show_menu()
+        which provides a richer interactive experience for human users.
+
+        :return: Selected menu option identifier
+        :rtype: str
+        """
         self.console.clear()
         self.console.print("[bold blue]Claude Code Interceptor Configuration[/bold blue]")
         self.console.print("=" * 40)
@@ -278,7 +417,17 @@ class TestPromptHandler(PromptHandler):
 
 
 def get_prompt_handler(console: Console) -> PromptHandler:
-    """Get the appropriate prompt handler based on the environment."""
+    """Get the appropriate prompt handler based on the environment.
+
+    Selects between InquirerPromptHandler for interactive use and TestPromptHandler
+    for automated testing environments. This allows the application to provide an
+    optimal user experience in interactive mode while remaining testable in CI/CD.
+
+    :param console: Rich console instance for output
+    :type console: Console
+    :return: Appropriate prompt handler for the current environment
+    :rtype: PromptHandler
+    """
     is_test = 'PYTEST_CURRENT_TEST' in os.environ
     if is_test:
         return TestPromptHandler(console)
@@ -287,16 +436,39 @@ def get_prompt_handler(console: Console) -> PromptHandler:
 
 
 class ConfigTUI:
-    """Terminal User Interface for managing Claude Code Interceptor configuration."""
+    """Terminal User Interface for managing Claude Code Interceptor configuration.
+
+    Provides a comprehensive text-based interface for managing providers and configurations.
+    Uses either InquirerPromptHandler or TestPromptHandler depending on the environment,
+    providing an optimal interface for both interactive use and automated testing.
+
+    The TUI supports the following operations:
+    - Add/List/Delete providers
+    - Create/List/Set/Delete configurations
+    - Manage default configurations
+    """
 
     def __init__(self):
-        """Initialize the TUI with a ConfigManager and Rich console."""
+        """Initialize the TUI with a ConfigManager and Rich console.
+
+        Automatically selects the appropriate prompt handler based on the environment
+        to provide the best user experience for interactive use or reliable behavior
+        in automated testing scenarios.
+        """
         self.config_manager = ConfigManager()
         self.console = Console()
         self.prompt_handler = get_prompt_handler(self.console)
 
     def run(self) -> None:
-        """Run the main TUI loop."""
+        """Run the main TUI loop.
+
+        Continuously displays the menu and processes user selections until the user
+        chooses to quit. Uses the configured prompt handler to adapt to different
+        environments (interactive vs testing).
+
+        :return: None
+        :rtype: None
+        """
         while True:
             choice = self.prompt_handler.show_menu()
 
@@ -319,7 +491,15 @@ class ConfigTUI:
                 self._delete_config()
 
     def _create_config(self) -> None:
-        """Create a new configuration."""
+        """Create a new configuration.
+
+        Guides the user through creating a new configuration by selecting a provider
+        and models for each model type (haiku, sonnet, opus), then saving the
+        configuration with a user-provided name.
+
+        :return: None
+        :rtype: None
+        """
         self.prompt_handler.clear_screen()
         self.prompt_handler.print_message("Create Configuration", "bold blue")
         self.prompt_handler.print_message("-" * 25)
@@ -369,7 +549,14 @@ class ConfigTUI:
         self.prompt_handler.wait_for_continue()
 
     def _add_provider(self) -> None:
-        """Add a new provider."""
+        """Add a new provider.
+
+        Prompts the user for a provider name and base URL, validates the provider
+        by fetching available models, and adds it to the configuration if valid.
+
+        :return: None
+        :rtype: None
+        """
         self.prompt_handler.clear_screen()
         self.prompt_handler.print_message("Add Provider", "bold blue")
         self.prompt_handler.print_message("-" * 20)
@@ -414,7 +601,14 @@ class ConfigTUI:
         self.prompt_handler.wait_for_continue()
 
     def _list_providers(self) -> None:
-        """List all configured providers."""
+        """List all configured providers.
+
+        Displays a formatted list of all configured providers, including their
+        base URLs and available models, using the configured prompt handler.
+
+        :return: None
+        :rtype: None
+        """
         self.prompt_handler.clear_screen()
         self.prompt_handler.print_message("Configured Providers", "bold blue")
         self.prompt_handler.print_message("-" * 25)
@@ -439,7 +633,15 @@ class ConfigTUI:
         self.prompt_handler.wait_for_continue()
 
     def _delete_provider(self) -> None:
-        """Delete a provider."""
+        """Delete a provider and associated configurations.
+
+        Displays "Delete Provider" header to indicate the current operation mode.
+        This method works with both InquirerPromptHandler and TestPromptHandler
+        prompt handlers, adapting to the environment's input/output requirements.
+
+        :return: None
+        :rtype: None
+        """
         self.prompt_handler.clear_screen()
         self.prompt_handler.print_message("Delete Provider", "bold blue")
         self.prompt_handler.print_message("-" * 20)
@@ -504,11 +706,15 @@ class ConfigTUI:
         self.prompt_handler.wait_for_continue()
 
     def _set_default_config(self, no_confirm: bool = False) -> None:
-        """
-        Set a configuration as the default.
+        """Set a configuration as the default.
+
+        Allows the user to select from available configurations to set as the default.
+        Can optionally skip the confirmation prompt for use in automated scenarios.
 
         :param no_confirm: If True, skip the "Press Enter to continue..." prompt
         :type no_confirm: bool
+        :return: None
+        :rtype: None
         """
         self.prompt_handler.clear_screen()
         self.prompt_handler.print_message("Set Default Configuration", "bold blue")
@@ -534,7 +740,14 @@ class ConfigTUI:
             self.prompt_handler.wait_for_continue()
 
     def _list_configs(self) -> None:
-        """List all saved configurations."""
+        """List all saved configurations.
+
+        Displays a formatted table of all saved configurations using the display utility.
+        Uses the configured prompt handler for consistent output formatting.
+
+        :return: None
+        :rtype: None
+        """
         from cci.utils.display import display_configs_table
 
         self.prompt_handler.clear_screen()
@@ -542,7 +755,14 @@ class ConfigTUI:
         self.prompt_handler.wait_for_continue()
 
     def _delete_config(self) -> None:
-        """Delete a saved configuration."""
+        """Delete a saved configuration.
+
+        Allows the user to select and delete a saved configuration, with special
+        handling for default configurations that prompts for a new default.
+
+        :return: None
+        :rtype: None
+        """
         self.prompt_handler.clear_screen()
         self.prompt_handler.print_message("Delete Configuration", "bold blue")
         self.prompt_handler.print_message("-" * 25)
@@ -584,7 +804,15 @@ class ConfigTUI:
         self.prompt_handler.wait_for_continue()
 
     def _check_and_prompt_for_new_default(self) -> None:
-        """Check if there are other configs available and set default automatically or prompt user."""
+        """Check if there are other configs available and set default automatically or prompt user.
+
+        Called when the default configuration is deleted. If there's only one
+        configuration remaining, it's automatically set as default. If there are
+        multiple configurations, the user is prompted to select a new default.
+
+        :return: None
+        :rtype: None
+        """
         configs = self.config_manager.config.get('configs', {})
         if configs:
             if len(configs) == 1:
