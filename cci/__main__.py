@@ -54,6 +54,106 @@ def load_configuration(cci_args):
     return env_vars
 
 
+def handle_version_command():
+    """Handle the --cci-version command."""
+    print("Claude Code Interceptor v0.1.0")
+
+
+def handle_help_command():
+    """Handle the --cci-help command."""
+    print("Claude Code Interceptor v0.1.0")
+    print("A wrapper for Claude Code CLI")
+    print("")
+    print("Usage: cci [OPTIONS] [CLAUD_ARGS]...")
+    print("")
+    print("Claude Code Intercept Commands:")
+    print("  --cci-version                                     Show Claude Code Interceptor version")
+    print("  --cci-help                                        Show this help message")
+    print("  --cci-config                                      Configure model providers and settings")
+    print("  --cci-list-configs                                List saved configurations in a table")
+    print("  --cci-use-config NAME                             Use a specific saved configuration")
+    print("")
+    print("All other arguments are passed through to the Claude Code CLI.")
+
+
+def handle_config_command():
+    """Handle the --cci-config command."""
+    # Import here to avoid circular imports and unnecessary dependencies
+    from cci.tui import ConfigTUI
+    tui = ConfigTUI()
+    tui.run()
+
+
+def handle_list_configs_command():
+    """Handle the --cci-list-configs command."""
+    # Import here to avoid circular imports and unnecessary dependencies
+    from cci.config import get_config_manager
+    from cci.utils.display import display_configs_table
+    config_manager = get_config_manager()
+    display_configs_table(config_manager)
+
+
+def handle_help_passthrough(passthrough_args, cci_args):
+    """Handle the help command passthrough to Claude CLI."""
+    # Apply configuration before showing help
+    env_vars = load_configuration(cci_args)
+
+    # Display environment variables
+    display_env_vars_and_command(env_vars, passthrough_args)
+
+    # Pass through to get Claude CLI help
+    try:
+        cmd = ['claude'] + passthrough_args
+        result = subprocess.run(cmd, capture_output=True, text=True)
+        print(result.stdout)
+        if result.stderr:
+            print(result.stderr, file=sys.stderr)
+
+        # Add cci-specific help at the bottom
+        print("\nClaude Code Intercept Commands:")
+        print("  --cci-version                                     Show Claude Code Interceptor version")
+        print("  --cci-help                                        Show this help message")
+        print("  --cci-config                                      Configure model providers and settings")
+        print("  --cci-list-configs                                List saved configurations in a table")
+        print("  --cci-use-config NAME                             Use a specific saved configuration")
+
+        sys.exit(result.returncode)
+    except FileNotFoundError:
+        print("Error: Claude Code CLI ('claude') not found. Please ensure it's installed and in your PATH.")
+        sys.exit(1)
+
+
+def launch_claude_cli(passthrough_args, cci_args):
+    """Launch the Claude CLI with appropriate configuration."""
+    # Apply configuration before launching Claude CLI
+    env_vars = load_configuration(cci_args)
+
+    # Display environment variables and command
+    display_env_vars_and_command(env_vars, passthrough_args)
+
+    # Pass arguments to Claude Code CLI
+    try:
+        if passthrough_args:
+            result = subprocess.run(['claude'] + passthrough_args)
+        else:
+            # Launch Claude CLI with no arguments (starts interactive session)
+            # We need to preserve the current environment and add our variables
+            full_env = os.environ.copy()
+            full_env.update(env_vars)
+
+            # Use subprocess with explicit stdin/stdout/stderr inheritance
+            # This should preserve the TTY connection when run from a real terminal
+            result = subprocess.run(['claude'], env=full_env,
+                                    stdin=sys.stdin, stdout=sys.stdout, stderr=sys.stderr)
+        sys.exit(result.returncode)
+    except FileNotFoundError:
+        print("Error: Claude Code CLI ('claude') not found. Please ensure it's installed and in your PATH.")
+        sys.exit(1)
+    except KeyboardInterrupt:
+        # Handle Ctrl+C gracefully for interactive sessions
+        sys.exit(0)
+
+
 def main():
     """Main entry point for the Claude Code Interceptor CLI."""
     # Split arguments into cci-specific and passthrough arguments
@@ -84,130 +184,28 @@ def main():
 
     # Handle cci-specific arguments
     if '--cci-version' in cci_args:
-        print("Claude Code Interceptor v0.1.0")
+        handle_version_command()
         return
 
     if '--cci-help' in cci_args:
-        print("Claude Code Interceptor v0.1.0")
-        print("A wrapper for Claude Code CLI")
-        print("")
-        print("Usage: cci [OPTIONS] [CLAUD_ARGS]...")
-        print("")
-        print("Claude Code Intercept Commands:")
-        print("  --cci-version                                     Show Claude Code Interceptor version")
-        print("  --cci-help                                        Show this help message")
-        print("  --cci-config                                      Configure model providers and settings")
-        print("  --cci-list-configs                                List saved configurations in a table")
-        print("  --cci-use-config NAME                             Use a specific saved configuration")
-        print("")
-        print("All other arguments are passed through to the Claude Code CLI.")
+        handle_help_command()
         return
 
     if '--cci-config' in cci_args:
-        # Import here to avoid circular imports and unnecessary dependencies
-        from cci.tui import ConfigTUI
-        tui = ConfigTUI()
-        tui.run()
+        handle_config_command()
         return
 
     if '--cci-list-configs' in cci_args:
-        # Import here to avoid circular imports and unnecessary dependencies
-        from cci.config import get_config_manager
-        from cci.utils.display import display_configs_table
-        config_manager = get_config_manager()
-        display_configs_table(config_manager)
+        handle_list_configs_command()
         return
 
     # Handle help command to show cci-specific help at the bottom
     if '--help' in passthrough_args or '-h' in passthrough_args:
-        # Apply configuration before showing help
-        env_vars = load_configuration(cci_args)
-
-        # Display environment variables
-        display_env_vars_and_command(env_vars, passthrough_args)
-
-        # Pass through to get Claude CLI help
-        try:
-            cmd = ['claude'] + passthrough_args
-            result = subprocess.run(cmd, capture_output=True, text=True)
-            print(result.stdout)
-            if result.stderr:
-                print(result.stderr, file=sys.stderr)
-
-            # Add cci-specific help at the bottom
-            print("\nClaude Code Intercept Commands:")
-            print("  --cci-version                                     Show Claude Code Interceptor version")
-            print("  --cci-help                                        Show this help message")
-            print("  --cci-config                                      Configure model providers and settings")
-            print("  --cci-list-configs                                List saved configurations in a table")
-            print("  --cci-use-config NAME                             Use a specific saved configuration")
-
-            sys.exit(result.returncode)
-        except FileNotFoundError:
-            print("Error: Claude Code CLI ('claude') not found. Please ensure it's installed and in your PATH.")
-            sys.exit(1)
+        handle_help_passthrough(passthrough_args, cci_args)
         return
 
-    # If no passthrough arguments but cci-specific args exist, launch claude with configuration
-    if not passthrough_args and cci_args:
-        # Apply configuration before launching Claude CLI
-        env_vars = load_configuration(cci_args)
-
-        # Display environment variables and command
-        display_env_vars_and_command(env_vars, [])
-
-        # Launch Claude CLI with no arguments (starts interactive session)
-        # We need to preserve the current environment and add our variables
-        full_env = os.environ.copy()
-        full_env.update(env_vars)
-
-        try:
-            result = subprocess.run(['claude'], env=full_env)
-            sys.exit(result.returncode)
-        except FileNotFoundError:
-            print("Error: Claude Code CLI ('claude') not found. Please ensure it's installed and in your PATH.")
-            sys.exit(1)
-        return
-    # If no arguments at all, start interactive Claude session with default config
-    elif not passthrough_args and not cci_args:
-        # Apply configuration to get environment variables
-        env_vars = load_configuration(cci_args)
-
-        # Display environment variables
-        display_env_vars_and_command(env_vars, [])
-
-        # Launch Claude CLI with no arguments (starts interactive session)
-        # We need to preserve the current environment and add our variables
-        full_env = os.environ.copy()
-        full_env.update(env_vars)
-
-        try:
-            # Use subprocess with explicit stdin/stdout/stderr inheritance
-            # This should preserve the TTY connection when run from a real terminal
-            result = subprocess.run(['claude'], env=full_env,
-                                    stdin=sys.stdin, stdout=sys.stdout, stderr=sys.stderr)
-            sys.exit(result.returncode)
-        except FileNotFoundError:
-            print("Error: Claude Code CLI ('claude') not found. Please ensure it's installed and in your PATH.")
-            sys.exit(1)
-        except KeyboardInterrupt:
-            # Handle Ctrl+C gracefully
-            sys.exit(0)
-        return
-
-    # Apply configuration before launching Claude CLI
-    env_vars = load_configuration(cci_args)
-
-    # Display environment variables and command
-    display_env_vars_and_command(env_vars, passthrough_args)
-
-    # Pass arguments to Claude Code CLI
-    try:
-        result = subprocess.run(['claude'] + passthrough_args)
-        sys.exit(result.returncode)
-    except FileNotFoundError:
-        print("Error: Claude Code CLI ('claude') not found. Please ensure it's installed and in your PATH.")
-        sys.exit(1)
+    # Launch Claude CLI with appropriate configuration
+    launch_claude_cli(passthrough_args, cci_args)
 
 
 if __name__ == "__main__":
