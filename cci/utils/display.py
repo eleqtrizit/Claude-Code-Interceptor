@@ -5,7 +5,7 @@ from typing import Dict, List
 from rich.console import Console
 from rich.table import Table
 
-from claude_code_intercept.config import ConfigManager
+from cci.config import ConfigManager
 
 
 def display_env_vars_and_command(env_vars: Dict[str, str], command_args: List[str]) -> None:

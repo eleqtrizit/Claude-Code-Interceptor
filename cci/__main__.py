@@ -2,7 +2,7 @@ import os
 import subprocess
 import sys
 
-from claude_code_intercept.utils.display import display_env_vars_and_command
+from cci.utils.display import display_env_vars_and_command
 
 
 def load_configuration(cci_args):
@@ -17,7 +17,7 @@ def load_configuration(cci_args):
     env_vars = {}
     try:
         # Import here to avoid circular imports and unnecessary dependencies
-        from claude_code_intercept.config import apply_configuration, get_config_manager
+        from cci.config import apply_configuration, get_config_manager
         config_manager = get_config_manager()
 
         # Check if --cci-use-config is specified
@@ -104,15 +104,15 @@ def main():
 
     if '--cci-config' in cci_args:
         # Import here to avoid circular imports and unnecessary dependencies
-        from claude_code_intercept.tui import ConfigTUI
+        from cci.tui import ConfigTUI
         tui = ConfigTUI()
         tui.run()
         return
 
     if '--cci-list-configs' in cci_args:
         # Import here to avoid circular imports and unnecessary dependencies
-        from claude_code_intercept.config import get_config_manager
-        from claude_code_intercept.utils.display import display_configs_table
+        from cci.config import get_config_manager
+        from cci.utils.display import display_configs_table
         config_manager = get_config_manager()
         display_configs_table(config_manager)
         return

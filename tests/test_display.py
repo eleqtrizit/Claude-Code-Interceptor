@@ -3,13 +3,13 @@
 import unittest
 from unittest.mock import Mock, patch
 
-from claude_code_intercept.utils.display import display_configs_table, display_env_vars_and_command
+from cci.utils.display import display_configs_table, display_env_vars_and_command
 
 
 class TestDisplayUtils(unittest.TestCase):
     """Test cases for display utilities."""
 
-    @patch('claude_code_intercept.utils.display.Console')
+    @patch('cci.utils.display.Console')
     def test_display_env_vars_and_command_with_vars_and_args(self, mock_console):
         """Test display_env_vars_and_command with environment variables and command args."""
         env_vars = {'TEST_VAR': 'test_value', 'ANOTHER_VAR': 'another_value'}
@@ -20,7 +20,7 @@ class TestDisplayUtils(unittest.TestCase):
         # Check that console print was called
         self.assertTrue(mock_console.return_value.print.called)
 
-    @patch('claude_code_intercept.utils.display.Console')
+    @patch('cci.utils.display.Console')
     def test_display_env_vars_and_command_without_vars(self, mock_console):
         """Test display_env_vars_and_command without environment variables."""
         env_vars = {}
@@ -31,7 +31,7 @@ class TestDisplayUtils(unittest.TestCase):
         # Check that console print was called
         self.assertTrue(mock_console.return_value.print.called)
 
-    @patch('claude_code_intercept.utils.display.Console')
+    @patch('cci.utils.display.Console')
     def test_display_env_vars_and_command_without_args(self, mock_console):
         """Test display_env_vars_and_command without command args."""
         env_vars = {'TEST_VAR': 'test_value'}
@@ -42,7 +42,7 @@ class TestDisplayUtils(unittest.TestCase):
         # Check that console print was called
         self.assertTrue(mock_console.return_value.print.called)
 
-    @patch('claude_code_intercept.utils.display.Console')
+    @patch('cci.utils.display.Console')
     def test_display_configs_table_empty(self, mock_console):
         """Test display_configs_table with no saved configurations."""
         mock_config_manager = Mock()
@@ -53,8 +53,8 @@ class TestDisplayUtils(unittest.TestCase):
         # Check that yellow message was printed for no configs
         mock_console.return_value.print.assert_called_with("[yellow]No saved configurations found.[/yellow]")
 
-    @patch('claude_code_intercept.utils.display.Console')
-    @patch('claude_code_intercept.utils.display.Table')
+    @patch('cci.utils.display.Console')
+    @patch('cci.utils.display.Table')
     def test_display_configs_table_with_configs(self, mock_table, mock_console):
         """Test display_configs_table with saved configurations."""
         mock_config_manager = Mock()

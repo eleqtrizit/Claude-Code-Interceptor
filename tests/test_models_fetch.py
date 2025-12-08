@@ -6,8 +6,7 @@ from unittest.mock import Mock, patch
 
 import requests
 
-from claude_code_intercept.utils.models_fetch import (discover_models_endpoint, fetch_models, list_models,
-                                                      normalize_base_url)
+from cci.utils.models_fetch import discover_models_endpoint, fetch_models, list_models, normalize_base_url
 
 
 def load_fixture(filename):
@@ -75,7 +74,7 @@ def test_discover_models_endpoint_none():
 
 def test_fetch_models_success():
     """Test fetch_models with successful response."""
-    with patch('claude_code_intercept.utils.models_fetch.discover_models_endpoint') as mock_discover, \
+    with patch('cci.utils.models_fetch.discover_models_endpoint') as mock_discover, \
             patch('requests.get') as mock_get:
 
         # Mock discovery to return a URL
@@ -96,7 +95,7 @@ def test_fetch_models_success():
 
 def test_fetch_models_discovery_failed():
     """Test fetch_models when discovery fails."""
-    with patch('claude_code_intercept.utils.models_fetch.discover_models_endpoint') as mock_discover:
+    with patch('cci.utils.models_fetch.discover_models_endpoint') as mock_discover:
         # Mock discovery to return None
         mock_discover.return_value = None
 
@@ -106,7 +105,7 @@ def test_fetch_models_discovery_failed():
 
 def test_fetch_models_request_failed():
     """Test fetch_models when the request fails."""
-    with patch('claude_code_intercept.utils.models_fetch.discover_models_endpoint') as mock_discover, \
+    with patch('cci.utils.models_fetch.discover_models_endpoint') as mock_discover, \
             patch('requests.get') as mock_get:
 
         # Mock discovery to return a URL
@@ -124,7 +123,7 @@ def test_list_models_openai_format():
     # Load real models data
     models_data = load_fixture('models_response.json')
 
-    with patch('claude_code_intercept.utils.models_fetch.fetch_models') as mock_fetch:
+    with patch('cci.utils.models_fetch.fetch_models') as mock_fetch:
         mock_fetch.return_value = models_data
 
         result = list_models("http://example.com")
@@ -144,7 +143,7 @@ def test_list_models_simple_list_format():
     """Test list_models with simple list format."""
     models_data = [{"id": "model1"}, {"id": "model2"}]
 
-    with patch('claude_code_intercept.utils.models_fetch.fetch_models') as mock_fetch:
+    with patch('cci.utils.models_fetch.fetch_models') as mock_fetch:
         mock_fetch.return_value = models_data
 
         result = list_models("http://example.com")
@@ -155,7 +154,7 @@ def test_list_models_string_list_format():
     """Test list_models with string list format."""
     models_data = ["model1", "model2"]
 
-    with patch('claude_code_intercept.utils.models_fetch.fetch_models') as mock_fetch:
+    with patch('cci.utils.models_fetch.fetch_models') as mock_fetch:
         mock_fetch.return_value = models_data
 
         result = list_models("http://example.com")
@@ -164,7 +163,7 @@ def test_list_models_string_list_format():
 
 def test_list_models_empty_response():
     """Test list_models with empty response."""
-    with patch('claude_code_intercept.utils.models_fetch.fetch_models') as mock_fetch:
+    with patch('cci.utils.models_fetch.fetch_models') as mock_fetch:
         mock_fetch.return_value = None
 
         result = list_models("http://example.com")
@@ -175,7 +174,7 @@ def test_list_models_invalid_format():
     """Test list_models with invalid response format."""
     models_data = {"unknown_key": "unknown_value"}
 
-    with patch('claude_code_intercept.utils.models_fetch.fetch_models') as mock_fetch:
+    with patch('cci.utils.models_fetch.fetch_models') as mock_fetch:
         mock_fetch.return_value = models_data
 
         result = list_models("http://example.com")

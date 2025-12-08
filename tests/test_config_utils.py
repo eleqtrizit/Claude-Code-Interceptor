@@ -1,6 +1,6 @@
 """Tests for the config_utils utility module."""
 
-from claude_code_intercept.utils.config_utils import normalize_config_name
+from cci.utils.config_utils import normalize_config_name
 
 
 def test_normalize_config_name():

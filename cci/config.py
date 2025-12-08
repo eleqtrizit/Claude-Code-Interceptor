@@ -5,8 +5,8 @@ import os
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from claude_code_intercept.utils.config_utils import normalize_config_name
-from claude_code_intercept.utils.models_fetch import fetch_models, list_models
+from cci.utils.config_utils import normalize_config_name
+from cci.utils.models_fetch import fetch_models, list_models
 
 
 class ConfigManager:

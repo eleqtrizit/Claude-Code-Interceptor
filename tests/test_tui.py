@@ -3,7 +3,7 @@
 import unittest
 from unittest.mock import patch
 
-from claude_code_intercept.tui import ConfigTUI
+from cci.tui import ConfigTUI
 
 
 class TestConfigTUI(unittest.TestCase):
@@ -11,10 +11,10 @@ class TestConfigTUI(unittest.TestCase):
 
     def setUp(self):
         """Set up test fixtures."""
-        with patch('claude_code_intercept.tui.ConfigManager'):
+        with patch('cci.tui.ConfigManager'):
             self.tui = ConfigTUI()
 
-    @patch('claude_code_intercept.tui.Prompt')
+    @patch('cci.tui.Prompt')
     def test_show_main_menu(self, mock_prompt):
         """Test the main menu can be displayed and exits properly."""
         # Mock the prompt to return 'q' to exit immediately

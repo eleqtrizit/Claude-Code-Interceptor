@@ -6,8 +6,8 @@ import requests
 from rich.console import Console
 from rich.prompt import Prompt
 
-from claude_code_intercept.config import ConfigManager
-from claude_code_intercept.utils.models_fetch import fetch_models, list_models
+from cci.config import ConfigManager
+from cci.utils.models_fetch import fetch_models, list_models
 
 
 class ConfigTUI:
