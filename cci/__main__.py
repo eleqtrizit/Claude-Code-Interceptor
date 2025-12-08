@@ -56,12 +56,12 @@ def load_configuration(cci_args):
 
 def handle_version_command():
     """Handle the --cci-version command."""
-    print("Claude Code Interceptor v0.1.0")
+    print("Claude Code Interceptor v0.1.1")
 
 
 def handle_help_command():
     """Handle the --cci-help command."""
-    print("Claude Code Interceptor v0.1.0")
+    print("Claude Code Interceptor v0.1.1")
     print("A wrapper for Claude Code CLI")
     print("")
     print("Usage: cci [OPTIONS] [CLAUD_ARGS]...")
@@ -156,6 +156,26 @@ def launch_claude_cli(passthrough_args, cci_args):
 
 def main():
     """Main entry point for the Claude Code Interceptor CLI."""
+    # Check if this is a configuration command - if so, don't check for config
+    config_cmd = False
+    for arg in sys.argv[1:]:
+        if arg in ['--cci-config', '--cci-help', '--cci-version', '--cci-list-configs']:
+            config_cmd = True
+            break
+
+    # If not a config command, check if there are any saved configurations
+    if not config_cmd:
+        from cci.config import get_config_manager
+        config_manager = get_config_manager()
+
+        # Check if there are any saved configurations
+        saved_configs = config_manager.config.get('configs', {})
+
+        # If no saved configurations exist, prompt user to configure
+        if not saved_configs:
+            print("No configuration found. Please run 'cci --cci-config' to set up your configuration.")
+            sys.exit(1)
+
     # Split arguments into cci-specific and passthrough arguments
     cci_args = []
     passthrough_args = []

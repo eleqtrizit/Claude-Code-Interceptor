@@ -1,12 +1,18 @@
 # Claude Code Interceptor
 
-A powerful wrapper for Claude Code CLI that enables flexible configuration of model providers and settings, allowing you to seamlessly switch between different AI model providers and configurations.
+A wrapper for Claude Code CLI that integrates with Anthropic-compatible endpoints.  Currently, you can use LiteLLM Proxy, Llama.cpp (with or w/o Llama Swap), vLLM.
+
+LiteLLM Proxy allows you to use OpenAI Compatible endpoints, too.
+
+```
+Claude Code -> LiteLLM Proxy -> OpenAI Compatible
+```
 
 ## Overview
 
-Claude Code Interceptor acts as a middleware layer between you and the Claude Code CLI, providing enhanced configuration management capabilities. It allows you to define multiple model providers (such as OpenAI-compatible APIs, Anthropic alternatives, or custom endpoints) and save named configurations for different use cases.
+Claude Code Interceptor acts as a middleware layer between you and the Claude Code CLI.  It allows you to quickly create configurations with different model providers and models - selecting models to replace Haiku, Sonnet and Opus - and save them for quick reuse later.  
 
-Whether you're working with different model providers for cost optimization, testing various models, or need to switch between different configurations for different projects, Claude Code Interceptor makes it effortless to manage and switch between these setups.
+Command line parameters are passed to Claude Code, except for --ccr-xxxx, which go to Claude Code Interceptor.
 
 ## Features
 
@@ -23,26 +29,15 @@ Whether you're working with different model providers for cost optimization, tes
 
 ### Prerequisites
 
-- Python 3.11 or higher
+- uv: https://docs.astral.sh/uv/
 - Claude Code CLI installed and accessible in your PATH
 
 ### Standard Installation
 
 ```bash
-pip install .
+uv tool install git+https://github.com/eleqtrizit/Claude-Code-Interceptor
 ```
 
-### Development Installation
-
-```bash
-pip install -e .
-```
-
-### Using UV (Recommended)
-
-```bash
-uv sync
-```
 
 ## Quick Start
 
@@ -58,13 +53,20 @@ uv sync
 
 3. **Run Claude Code CLI with a specific configuration**:
    ```bash
-   cci --cci-use-config my-config
+   cci --cci-use-config myconfig
    ```
 
 4. **Run Claude Code CLI with default configuration**:
    ```bash
    cci
    ```
+
+### Development Installation
+
+```bash
+uv venv
+uv synv
+```
 
 ## Usage
 
@@ -120,7 +122,7 @@ cci --cci-config  # Then select "Set Default Config"
 
 Claude Code Interceptor intercepts calls to the Claude Code CLI and injects environment variables based on your selected configuration. This allows you to:
 
-1. Define multiple model providers (OpenAI-compatible APIs, custom endpoints, etc.)
+1. Define multiple model providers
 2. Associate specific models with Haiku, Sonnet, and Opus variants
 3. Save these associations as named configurations
 4. Switch between configurations effortlessly
@@ -152,29 +154,6 @@ make lint
 make format
 ```
 
-### Project Structure
-
-```
-cci/
-├── __main__.py          # Main entry point
-├── config.py           # Configuration management
-├── tui.py              # Terminal User Interface
-└── utils/              # Utility functions
-    ├── config_utils.py # Configuration utilities
-    ├── display.py      # Display utilities
-    └── models_fetch.py # Model fetching utilities
-```
-
-### Running Tests
-
-```bash
-# Run all tests
-pytest tests/ -v
-
-# Run tests with coverage
-pytest tests/ --cov=cci --cov-report=term-missing --cov-report=html
-```
-
 ## Configuration Details
 
 Configurations are stored in `~/.config/cci/config.json` and include:
@@ -200,55 +179,7 @@ Claude Code Interceptor sets the following environment variables based on your c
 
 Note: If an AUTH_TOKEN exists in the environment, it will be unset when using a custom provider.
 
-## Supported Model Providers
-
-Claude Code Interceptor works with any OpenAI-compatible API endpoint that supports the `/v1/models` endpoint. This includes:
-
-- OpenAI API
-- Azure OpenAI
-- Local model servers (LM Studio, Ollama with OpenAI compatibility, etc.)
-- Custom proxy servers
-- Alternative providers with OpenAI-compatible APIs
-
-The system automatically discovers the models endpoint by trying common paths like `/v1/models` and `/models`.
-
-## Troubleshooting
-
-### Provider Connection Issues
-
-If you're having trouble adding a provider:
-1. Ensure the base URL is correct and accessible
-2. Verify the endpoint supports the `/v1/models` API
-3. Check that your network connection can reach the endpoint
-
-### Configuration Not Found
-
-If a saved configuration isn't working:
-1. List your configurations with `cci --cci-list-configs`
-2. Verify the configuration name spelling
-3. Check that the associated provider still exists
-
-### Claude CLI Not Found
-
-If you get "Claude Code CLI ('claude') not found":
-1. Ensure Claude Code CLI is installed
-2. Verify it's in your PATH
-3. Check that you can run `claude --help` directly
-
-## Contributing
-
-Contributions are welcome! Please feel free to submit pull requests or open issues for bugs and feature requests.
-
-Development follows standard Python practices:
-- Code formatting with autopep8
-- Linting with flake8 and mypy
-- Comprehensive test coverage
-- Clear documentation
 
 ## License
 
 MIT
-
-## Acknowledgments
-
-This tool is designed to work with Claude Code CLI and is not officially affiliated with Anthropic.
