@@ -331,8 +331,8 @@ class TestConfigTUI(unittest.TestCase):
     def test_run_add_provider(self, mock_config_manager, mock_prompt, mock_input):
         """Test running TUI with add provider option."""
         # Mock the prompt sequence: first select "1" (Add Provider), then "q" (Quit)
-        # We also need to provide values for the provider name and base URL inputs
-        mock_prompt.ask.side_effect = ['1', 'test_provider', 'http://test.com', 'q']
+        # We also need to provide values for the provider name, base URL, and API key inputs
+        mock_prompt.ask.side_effect = ['1', 'test_provider', 'http://test.com', '3', 'q']  # 3 = "No API Key needed"
         # Mock input for wait_for_continue calls
         mock_input.return_value = ''
 
@@ -438,6 +438,7 @@ class TestConfigTUI(unittest.TestCase):
         mock_ph_instance.get_input.side_effect = ['test_provider', 'http://test.com']
         mock_ph_instance.print_message = MagicMock()
         mock_ph_instance.wait_for_continue = MagicMock()
+        mock_ph_instance.select_option.return_value = "No API Key needed"  # Mock API key selection
 
         mock_cm_instance = mock_config_manager.return_value
         mock_cm_instance.add_provider.return_value = True
@@ -460,9 +461,11 @@ class TestConfigTUI(unittest.TestCase):
             mock_ph_instance.clear_screen.assert_called()
             mock_ph_instance.get_input.assert_any_call("Enter provider name")
             mock_ph_instance.get_input.assert_any_call("Enter base URL")
+            mock_ph_instance.select_option.assert_called_with(
+                "Set API Key", ["Enter API Key", "Use environment variable", "No API Key needed"])
             mock_fetch_models.assert_called_with('http://test.com')
             mock_list_models.assert_called_with('http://test.com')
-            mock_cm_instance.add_provider.assert_called_with('test_provider', 'http://test.com')
+            mock_cm_instance.add_provider.assert_called_with('test_provider', 'http://test.com', '', 'none')
             mock_ph_instance.print_message.assert_called()
             mock_ph_instance.wait_for_continue.assert_called()
 

@@ -1,7 +1,6 @@
 """Tests for the configuration management module."""
 
 import json
-import os
 from unittest.mock import patch
 
 import pytest
@@ -384,74 +383,51 @@ class TestConfigManager:
             "models": {"haiku": "loaded-haiku", "sonnet": "loaded-sonnet", "opus": "loaded-opus"}
         }
 
-        # Set current models to different values
-        config_manager.config["models"]["haiku"] = "current-haiku"
-        config_manager.config["models"]["sonnet"] = "current-sonnet"
-        config_manager.config["models"]["opus"] = "current-opus"
+        # Add the provider that the config references
+        config_manager.config["providers"]["test-provider"] = {
+            "base_url": "http://test.com/v1",
+            "models": ["model1"]
+        }
 
         # Load the saved config
         result = config_manager.load_config_by_name("test-config")
 
-        # Check results
-        assert result is True
-        assert config_manager.config["models"]["haiku"] == "loaded-haiku"
-        assert config_manager.config["models"]["sonnet"] == "loaded-sonnet"
-        assert config_manager.config["models"]["opus"] == "loaded-opus"
+        # Check results - should return a dict with base_url and models
+        assert isinstance(result, dict)
+        assert result["base_url"] == "http://test.com/v1"
+        assert result["models"]["haiku"] == "loaded-haiku"
+        assert result["models"]["sonnet"] == "loaded-sonnet"
+        assert result["models"]["opus"] == "loaded-opus"
 
     def test_load_config_by_name_not_found(self, config_manager):
         """Test loading non-existent configuration."""
         result = config_manager.load_config_by_name("non-existent")
-        assert result is False
+        assert result == {}
 
     def test_set_default_config(self, config_manager):
         """Test setting a configuration as default."""
         config_manager.set_default_config("test-config")
         assert config_manager.config["default_config"] == "test-config"
 
-    def test_load_default_config_success(self, config_manager):
-        """Test successful loading of default configuration."""
-        # Set up a default config
-        config_manager.config["configs"]["default-test"] = {
-            "provider": "test-provider",
-            "models": {"haiku": "default-haiku"}
-        }
-        config_manager.config["default_config"] = "default-test"
-
-        # Set current models to different values
-        config_manager.config["models"]["haiku"] = "current-haiku"
-
-        # Load default config
-        result = config_manager.load_default_config()
-
-        # Check results
-        assert result is True
-        assert config_manager.config["models"]["haiku"] == "default-haiku"
-
-    def test_load_default_config_no_default(self, config_manager):
-        """Test loading default configuration when none is set."""
-        config_manager.config["default_config"] = None
-        result = config_manager.load_default_config()
-        assert result is False
-
     def test_get_environment_variables_with_provider(self, config_manager):
         """Test getting environment variables with a specific provider."""
-        # Add a provider
-        config_manager.config["providers"]["test-provider"] = {
+        # Create a config dictionary as the method now expects
+        config = {
             "base_url": "http://test.com/v1",
-            "models": ["model1"]
+            "models": {
+                "haiku": "test-haiku",
+                "sonnet": "test-sonnet",
+                "opus": "test-opus"
+            },
+            "api_key": "",
+            "api_key_type": "none"
         }
 
-        # Set some models
-        config_manager.config["models"]["haiku"] = "test-haiku"
-        config_manager.config["models"]["sonnet"] = "test-sonnet"
-        config_manager.config["models"]["opus"] = "test-opus"
-
-        # Mock environment variable
-        with patch.dict(os.environ, {"ANTHROPIC_AUTH_TOKEN": "test-token"}):
-            env_vars = config_manager.get_environment_variables("test-provider")
+        env_vars = config_manager.get_environment_variables(config)
 
         # Check results
         assert env_vars["ANTHROPIC_BASE_URL"] == "http://test.com/v1"
+        assert env_vars["ANTHROPIC_API_KEY"] == ""
         assert env_vars["ANTHROPIC_AUTH_TOKEN"] == ""
         assert env_vars["ANTHROPIC_DEFAULT_HAIKU_MODEL"] == "test-haiku"
         assert env_vars["ANTHROPIC_DEFAULT_SONNET_MODEL"] == "test-sonnet"
@@ -459,23 +435,138 @@ class TestConfigManager:
 
     def test_get_environment_variables_without_provider(self, config_manager):
         """Test getting environment variables without specifying a provider."""
-        # Set some models
-        config_manager.config["models"]["haiku"] = "test-haiku"
+        # Create a config dictionary with minimal information
+        config = {
+            "base_url": None,  # No base URL
+            "models": {
+                "haiku": "test-haiku",
+                "sonnet": None,
+                "opus": None
+            },
+            "api_key": "",
+            "api_key_type": "none"
+        }
 
-        env_vars = config_manager.get_environment_variables()
+        env_vars = config_manager.get_environment_variables(config)
 
         # Check results
-        assert "ANTHROPIC_BASE_URL" not in env_vars
+        assert env_vars["ANTHROPIC_BASE_URL"] is None
+        assert env_vars["ANTHROPIC_API_KEY"] == ""
         assert env_vars["ANTHROPIC_DEFAULT_HAIKU_MODEL"] == "test-haiku"
-        assert "ANTHROPIC_DEFAULT_SONNET_MODEL" not in env_vars
-        assert "ANTHROPIC_DEFAULT_OPUS_MODEL" not in env_vars
+        assert env_vars["ANTHROPIC_DEFAULT_SONNET_MODEL"] is None
+        assert env_vars["ANTHROPIC_DEFAULT_OPUS_MODEL"] is None
 
     def test_get_environment_variables_nonexistent_provider(self, config_manager):
         """Test getting environment variables with non-existent provider."""
-        env_vars = config_manager.get_environment_variables("non-existent")
+        # Create a config dictionary with minimal information
+        config = {
+            "base_url": None,
+            "models": {
+                "haiku": None,
+                "sonnet": None,
+                "opus": None
+            },
+            "api_key": "",
+            "api_key_type": "none"
+        }
+
+        env_vars = config_manager.get_environment_variables(config)
 
         # Should not have base URL but might have model vars
-        assert "ANTHROPIC_BASE_URL" not in env_vars
+        assert env_vars["ANTHROPIC_BASE_URL"] is None
+        assert env_vars["ANTHROPIC_API_KEY"] == ""
+
+    def test_get_environment_variables_with_direct_api_key(self, config_manager):
+        """Test getting environment variables with a direct API key."""
+        # Create a config dictionary with a direct API key
+        config = {
+            "base_url": "http://test.com/v1",
+            "models": {
+                "haiku": "test-haiku",
+                "sonnet": "test-sonnet",
+                "opus": "test-opus"
+            },
+            "api_key": "test-api-key",
+            "api_key_type": "direct"
+        }
+
+        env_vars = config_manager.get_environment_variables(config)
+
+        # Check results
+        assert env_vars["ANTHROPIC_BASE_URL"] == "http://test.com/v1"
+        assert env_vars["ANTHROPIC_API_KEY"] == "test-api-key"
+        assert env_vars["ANTHROPIC_DEFAULT_HAIKU_MODEL"] == "test-haiku"
+        assert env_vars["ANTHROPIC_DEFAULT_SONNET_MODEL"] == "test-sonnet"
+        assert env_vars["ANTHROPIC_DEFAULT_OPUS_MODEL"] == "test-opus"
+
+    def test_get_environment_variables_with_envvar_api_key(self, config_manager):
+        """Test getting environment variables with an environment variable API key."""
+        # Create a config dictionary with an environment variable API key
+        config = {
+            "base_url": "http://test.com/v1",
+            "models": {
+                "haiku": "test-haiku",
+                "sonnet": "test-sonnet",
+                "opus": "test-opus"
+            },
+            "api_key": "TEST_API_KEY_VAR",
+            "api_key_type": "envvar"
+        }
+
+        # Mock the environment variable
+        import os
+        original_value = os.environ.get("TEST_API_KEY_VAR")
+        os.environ["TEST_API_KEY_VAR"] = "actual-api-key-from-env"
+
+        try:
+            env_vars = config_manager.get_environment_variables(config)
+
+            # Check results
+            assert env_vars["ANTHROPIC_BASE_URL"] == "http://test.com/v1"
+            assert env_vars["ANTHROPIC_API_KEY"] == "actual-api-key-from-env"
+            assert env_vars["ANTHROPIC_DEFAULT_HAIKU_MODEL"] == "test-haiku"
+            assert env_vars["ANTHROPIC_DEFAULT_SONNET_MODEL"] == "test-sonnet"
+            assert env_vars["ANTHROPIC_DEFAULT_OPUS_MODEL"] == "test-opus"
+        finally:
+            # Restore original environment
+            if original_value is not None:
+                os.environ["TEST_API_KEY_VAR"] = original_value
+            else:
+                os.environ.pop("TEST_API_KEY_VAR", None)
+
+    def test_get_environment_variables_with_missing_envvar_api_key(self, config_manager):
+        """Test getting environment variables with a missing environment variable API key."""
+        # Create a config dictionary with a missing environment variable API key
+        config = {
+            "base_url": "http://test.com/v1",
+            "models": {
+                "haiku": "test-haiku",
+                "sonnet": "test-sonnet",
+                "opus": "test-opus"
+            },
+            "api_key": "MISSING_API_KEY_VAR",
+            "api_key_type": "envvar"
+        }
+
+        # Ensure the environment variable is not set
+        import os
+        original_value = os.environ.get("MISSING_API_KEY_VAR")
+        if original_value is not None:
+            del os.environ["MISSING_API_KEY_VAR"]
+
+        try:
+            env_vars = config_manager.get_environment_variables(config)
+
+            # Check results - should be empty string since env var doesn't exist
+            assert env_vars["ANTHROPIC_BASE_URL"] == "http://test.com/v1"
+            assert env_vars["ANTHROPIC_API_KEY"] == ""
+            assert env_vars["ANTHROPIC_DEFAULT_HAIKU_MODEL"] == "test-haiku"
+            assert env_vars["ANTHROPIC_DEFAULT_SONNET_MODEL"] == "test-sonnet"
+            assert env_vars["ANTHROPIC_DEFAULT_OPUS_MODEL"] == "test-opus"
+        finally:
+            # Restore original environment
+            if original_value is not None:
+                os.environ["MISSING_API_KEY_VAR"] = original_value
 
 
 def test_get_config_manager():

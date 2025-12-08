@@ -61,7 +61,7 @@ class ConfigManager:
         with open(self.config_file, 'w') as f:
             json.dump(self.config, f, indent=2)
 
-    def add_provider(self, name: str, base_url: str) -> bool:
+    def add_provider(self, name: str, base_url: str, api_key: str = "", api_key_type: str = "none") -> bool:
         """
         Add a new model provider.
 
@@ -69,6 +69,10 @@ class ConfigManager:
         :type name: str
         :param base_url: Base URL of the provider
         :type base_url: str
+        :param api_key: API key for the provider (optional)
+        :type api_key: str
+        :param api_key_type: Type of API key handling (direct, envvar, none)
+        :type api_key_type: str
         :return: True if successful, False otherwise
         :rtype: bool
         """
@@ -80,7 +84,9 @@ class ConfigManager:
             # Add provider to config
             self.config['providers'][name] = {
                 'base_url': base_url,
-                'models': model_list
+                'models': model_list,
+                'api_key': api_key,
+                'api_key_type': api_key_type
             }
 
             self.save_config()
@@ -257,7 +263,7 @@ class ConfigManager:
 
         :param name: Name of configuration to load
         :type name: str
-        :return: Dictionary of provider base URL and models, or empty dict if not found
+        :return: Dictionary of provider base URL, models, and API key info, or empty dict if not found
         :rtype: dict
         """
         if name not in self.config['configs']:
@@ -265,9 +271,17 @@ class ConfigManager:
 
         provider = self.config['configs'][name]['provider']
 
+        # Check if provider exists
+        if provider not in self.config['providers']:
+            return {}
+
+        provider_config = self.config['providers'][provider]
+
         return {
-            'base_url': self.config['providers'][provider]['base_url'],
-            'models': self.config['configs'][name]['models']
+            'base_url': provider_config['base_url'],
+            'models': self.config['configs'][name]['models'],
+            'api_key': provider_config.get('api_key', ''),
+            'api_key_type': provider_config.get('api_key_type', 'none')
         }
 
     def get_default_config_name(self) -> Optional[str]:
@@ -307,12 +321,24 @@ class ConfigManager:
         :return: Dictionary of environment variables
         :rtype: Dict[str, str]
         """
+        # Determine the API key value based on the API key type
+        api_key = ""
+        api_key_type = config.get('api_key_type', 'none')
+        api_key_value = config.get('api_key', '')
+
+        if api_key_type == 'direct':
+            api_key = api_key_value
+        elif api_key_type == 'envvar':
+            # Get the actual API key from the environment variable
+            import os
+            api_key = os.environ.get(api_key_value, '')
+
         return {
             'ANTHROPIC_DEFAULT_HAIKU_MODEL': config['models']['haiku'],
             'ANTHROPIC_DEFAULT_SONNET_MODEL': config['models']['sonnet'],
             'ANTHROPIC_DEFAULT_OPUS_MODEL': config['models']['opus'],
             'ANTHROPIC_BASE_URL': config['base_url'],
-            'ANTHROPIC_API_KEY': "",
+            'ANTHROPIC_API_KEY': api_key,
             "ANTHROPIC_AUTH_TOKEN": "",
         }
 

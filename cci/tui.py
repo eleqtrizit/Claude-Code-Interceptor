@@ -1,3 +1,4 @@
+# mypy: disable-error-code="assignment"
 """Terminal User Interface for Claude Code Interceptor configuration.
 
 This module provides a text-based user interface for managing Claude Code Interceptor
@@ -10,7 +11,7 @@ import sys
 from abc import ABC, abstractmethod
 from typing import List, Optional
 
-import inquirer
+import inquirer  # type: ignore
 import requests
 from rich.console import Console
 from rich.prompt import Prompt
@@ -556,6 +557,61 @@ class ConfigTUI:
         self.prompt_handler.print_message(f"Configuration '{normalized_name}' created successfully!", "green")
         self.prompt_handler.wait_for_continue()
 
+    def _configure_api_key(self) -> tuple[str, str]:
+        """Configure API key for a provider.
+
+        :return: Tuple of (api_key, api_key_type)
+        :rtype: tuple[str, str]
+        """
+        api_key_options = [
+            "Enter API Key",
+            "Use environment variable",
+            "No API Key needed"
+        ]
+
+        choice = self.prompt_handler.select_option(
+            "Set API Key",
+            api_key_options
+        )
+
+        if choice == api_key_options[2]:  # No API key
+            return "", "none"
+        elif choice == api_key_options[0]:  # Enter API key
+            api_key = self.prompt_handler.get_input("Enter API key")
+            if not api_key:
+                self.prompt_handler.print_message("API key cannot be empty.", "red")
+                return "", "none"
+            return api_key, "direct"
+        elif choice == api_key_options[1]:  # Environment variable
+            env_var = self.prompt_handler.get_input("Enter environment variable name")
+            if not env_var:
+                self.prompt_handler.print_message("Environment variable name cannot be empty.", "red")
+                return "", "none"
+
+            # Validate environment variable exists
+            if not os.environ.get(env_var, '').strip():
+                self.prompt_handler.print_message(
+                    f"Warning: Environment variable '{env_var}' not found",
+                    "yellow"
+                )
+
+                # Offer options to continue or re-enter
+                continue_options = [
+                    "Enter environment variable again",
+                    "Force accept"
+                ]
+                continue_choice = self.prompt_handler.select_option(
+                    f"Error: ENV VAR {env_var} not found",
+                    continue_options
+                )
+
+                if continue_choice == continue_options[0]:  # Enter again
+                    return self._configure_api_key()  # Recursive call to re-enter
+
+            return env_var, "envvar"
+
+        return "", "none"
+
     def _add_provider(self) -> None:
         """Add a new provider.
 
@@ -583,11 +639,39 @@ class ConfigTUI:
             self.prompt_handler.wait_for_continue()
             return
 
+        # Configure API key
+        api_key, api_key_type = self._configure_api_key()
+
         # Validate the provider by fetching models
         self.prompt_handler.print_message("Validating provider...", "yellow")
         try:
-            models_data = fetch_models(base_url)
-            model_list = list_models(base_url) if models_data else []
+            # For providers requiring API key, we might need to temporarily set it
+            # in environment variables for validation
+            temp_env = {}
+            if api_key_type == "direct":
+                temp_env['ANTHROPIC_API_KEY'] = api_key
+            elif api_key_type == "envvar":
+                temp_env['ANTHROPIC_API_KEY'] = os.environ.get(api_key, '')
+
+            # Temporarily set environment variables for validation
+            original_env: dict[str, Optional[str]] = {}
+            for key, value in temp_env.items():
+                original_env[key] = os.environ.get(key)
+                if value:
+                    # Ensure we're setting a string value
+                    os.environ[key] = str(value or '')
+
+            try:
+                models_data = fetch_models(base_url)
+                model_list = list_models(base_url) if models_data else []
+            finally:
+                # Restore original environment
+                for key, value in original_env.items():
+                    if value is None:
+                        os.environ.pop(key, None)
+                    else:
+                        # Ensure we're setting a string value
+                        os.environ[key] = str(value or '')
 
             if not model_list:
                 self.prompt_handler.print_message("No models found, not saving provider", "red")
@@ -595,7 +679,7 @@ class ConfigTUI:
                 return
 
             # Add provider to config
-            success = self.config_manager.add_provider(name, base_url)
+            success = self.config_manager.add_provider(name, base_url, api_key, api_key_type)
             if success:
                 self.prompt_handler.print_message(
                     f"Provider '{name}' added successfully with {len(model_list)} models.", "green")
@@ -612,7 +696,7 @@ class ConfigTUI:
         """List all configured providers.
 
         Displays a formatted list of all configured providers, including their
-        base URLs and available models, using the configured prompt handler.
+        base URLs, available models, and API key information, using the configured prompt handler.
 
         :return: None
         :rtype: None
@@ -628,6 +712,17 @@ class ConfigTUI:
             for name, provider in providers.items():
                 self.prompt_handler.print_message(f"{name}", "bold")
                 self.prompt_handler.print_message(f"  URL: {provider['base_url']}")
+
+                # Display API key info
+                api_key_type = provider.get('api_key_type', 'none')
+                if api_key_type == 'direct':
+                    self.prompt_handler.print_message("  API Key: [Direct Entry]")
+                elif api_key_type == 'envvar':
+                    env_var = provider.get('api_key', '')
+                    self.prompt_handler.print_message(f"  API Key: [Env Var: {env_var}]")
+                else:
+                    self.prompt_handler.print_message("  API Key: [None Required]")
+
                 self.prompt_handler.print_message(f"  Models: {len(provider['models'])}")
                 if provider['models']:
                     # Show first 5 models
