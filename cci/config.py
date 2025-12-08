@@ -328,6 +328,8 @@ class ConfigManager:
         if models['opus']:
             env_vars['ANTHROPIC_DEFAULT_OPUS_MODEL'] = models['opus']
 
+        env_vars['ANTHROPIC_API_KEY'] = None
+
         return env_vars
 
 
