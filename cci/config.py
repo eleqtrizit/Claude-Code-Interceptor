@@ -104,6 +104,16 @@ class ConfigManager:
         :type name: str
         """
         if name in self.config['providers']:
+            # Remove associated configurations first
+            configs_to_remove = self.get_configs_for_provider(name)
+            for config_name in configs_to_remove:
+                if config_name in self.config['configs']:
+                    del self.config['configs'][config_name]
+
+                    # Reset default config if it was the one removed
+                    if self.config['default_config'] == config_name:
+                        self.config['default_config'] = None
+
             del self.config['providers'][name]
 
             # Reset current provider if it was the one removed
@@ -143,6 +153,24 @@ class ConfigManager:
             return True
         except Exception:
             return False
+
+    def get_configs_for_provider(self, provider_name: str) -> List[str]:
+        """
+        Get list of configuration names that use a specific provider.
+
+        :param provider_name: Name of the provider to check
+        :type provider_name: str
+        :return: List of configuration names that use the provider
+        :rtype: List[str]
+        """
+        configs = self.config.get('configs', {})
+        associated_configs = []
+
+        for config_name, config_data in configs.items():
+            if config_data.get('provider') == provider_name:
+                associated_configs.append(config_name)
+
+        return associated_configs
 
     def set_current_provider(self, name: str) -> bool:
         """

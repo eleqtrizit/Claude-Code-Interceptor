@@ -298,13 +298,35 @@ class ConfigTUI:
         provider_index = int(choice) - 1
         provider_name = provider_names[provider_index]
 
+        # Check for associated configurations
+        associated_configs = self.config_manager.get_configs_for_provider(provider_name)
+        if associated_configs:
+            msg = f"[bold yellow]Warning:[/bold yellow] Provider '{provider_name}' has "
+            msg += f"{len(associated_configs)} associated configuration(s):"
+            self.console.print(msg)
+            for config_name in associated_configs:
+                is_default = " ([bold green]*default[/bold green])" if (
+                    config_name == self.config_manager.config.get('default_config')) else ""
+                self.console.print(f"  - {config_name}{is_default}")
+            self.console.print("[bold yellow]These configurations will also be deleted.[/bold yellow]")
+
+            # Additional confirmation for configs
+            confirm_msg = "[bold red]Are you sure you want to delete the provider and all "
+            confirm_msg += "associated configurations?[/bold red] (y/N)"
+            confirm_configs = Prompt.ask(confirm_msg, choices=['y', 'n'], default='n')
+
+            if confirm_configs.lower() != 'y':
+                self.console.print("[yellow]Deletion cancelled.[/yellow]")
+                Prompt.ask("Press Enter to continue...")
+                return
+
         # Confirm deletion
         confirm = Prompt.ask(f"[bold red]Are you sure you want to delete '{provider_name}'?[/bold red] (y/N)",
                              choices=['y', 'n'], default='n')
 
         if confirm.lower() == 'y':
             self.config_manager.remove_provider(provider_name)
-            self.console.print(f"[green]Provider '{provider_name}' deleted.[/green]")
+            self.console.print(f"[green]Provider '{provider_name}' and associated configurations deleted.[/green]")
         else:
             self.console.print("[yellow]Deletion cancelled.[/yellow]")
 
