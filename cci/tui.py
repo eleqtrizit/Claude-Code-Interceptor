@@ -207,9 +207,13 @@ class InquirerPromptHandler(PromptHandler):
         return self.select_option("Select provider", providers)
 
     def select_model(self, model_type: str, models: List[str]) -> Optional[str]:
-        choices = ['None'] + models
-        selected = self.select_option(f"Select model for {model_type.capitalize()}", choices)
-        return selected if selected != 'None' else None
+        if not models:
+            self.console.print(f"No models available for {model_type}.", "yellow")
+            return None
+
+        # Require user to select a model (no "None" option)
+        selected = self.select_option(f"Select model for {model_type.capitalize()}", models)
+        return selected
 
     def select_config(self, configs: List[str], default_config: Optional[str] = None) -> str:
         # Mark the current default config
@@ -344,15 +348,19 @@ class TestPromptHandler(PromptHandler):
         return providers[int(choice) - 1]
 
     def select_model(self, model_type: str, models: List[str]) -> Optional[str]:
-        model_choices = ['None'] + models
+        if not models:
+            self.console.print(f"No models available for {model_type}.", "yellow")
+            return None
+
         self.console.print(f"Available models for {model_type}:")
-        for i, model in enumerate(model_choices):
+        for i, model in enumerate(models, 1):  # Start numbering from 1
             self.console.print(f"{i}. {model}")
 
-        choice = Prompt.ask(f"[bold cyan]Select model for {model_type} (0 for None)[/bold cyan]",
-                            choices=[str(i) for i in range(len(model_choices))])
-        selected = model_choices[int(choice)]
-        return selected if selected != 'None' else None
+        # Require user to select a model (no "None" option)
+        choice = Prompt.ask(f"[bold cyan]Select model for {model_type}[/bold cyan]",
+                            choices=[str(i) for i in range(1, len(models) + 1)])
+        selected = models[int(choice) - 1]  # Adjust for 1-based indexing
+        return selected
 
     def select_config(self, configs: List[str], default_config: Optional[str] = None) -> str:
         self.console.print("Available configurations:")

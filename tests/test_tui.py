@@ -60,11 +60,13 @@ class TestInquirerPromptHandler(unittest.TestCase):
         self.assertEqual(result, 'model1')
 
     @patch('cci.tui.inquirer.prompt')
-    def test_select_model_with_none(self, mock_prompt):
-        """Test model selection with None chosen."""
-        mock_prompt.return_value = {'option': 'None'}
-        result = self.handler.select_model('haiku', ['model1', 'model2'])
-        self.assertIsNone(result)
+    def test_select_model_no_models_available(self, mock_prompt):
+        """Test model selection when no models are available."""
+        # Mock the console print method
+        with patch.object(self.handler.console, 'print') as mock_print:
+            result = self.handler.select_model('haiku', [])
+            self.assertIsNone(result)
+            mock_print.assert_called_once_with("No models available for haiku.", "yellow")
 
     @patch('cci.tui.inquirer.prompt')
     def test_select_config_with_default(self, mock_prompt):
@@ -181,16 +183,18 @@ class TestTestPromptHandler(unittest.TestCase):
     @patch('cci.tui.Prompt.ask')
     def test_select_model_with_selection(self, mock_ask):
         """Test model selection with a model chosen."""
-        mock_ask.return_value = '2'  # Third option (second model, because 0 is None, 1 is model1, 2 is model2)
+        mock_ask.return_value = '2'  # Second option (second model, because 1 is model1, 2 is model2)
         result = self.handler.select_model('haiku', ['model1', 'model2'])
         self.assertEqual(result, 'model2')
 
     @patch('cci.tui.Prompt.ask')
-    def test_select_model_with_none(self, mock_ask):
-        """Test model selection with None chosen."""
-        mock_ask.return_value = '0'  # First option (None)
-        result = self.handler.select_model('haiku', ['model1', 'model2'])
-        self.assertIsNone(result)
+    def test_select_model_no_models_available(self, mock_ask):
+        """Test model selection when no models are available."""
+        # Mock the console print method
+        with patch.object(self.handler.console, 'print') as mock_print:
+            result = self.handler.select_model('haiku', [])
+            self.assertIsNone(result)
+            mock_print.assert_called_once_with("No models available for haiku.", "yellow")
 
     @patch('cci.tui.Prompt.ask')
     def test_select_config(self, mock_ask):
