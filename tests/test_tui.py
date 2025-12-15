@@ -567,6 +567,510 @@ class TestConfigTUI(unittest.TestCase):
         mock_ph_instance.print_message.assert_called()
         mock_ph_instance.wait_for_continue.assert_called()
 
+    @patch('cci.tui.TestPromptHandler')
+    @patch('cci.tui.ConfigManager')
+    def test_configure_api_key_no_api_key(self, mock_config_manager, mock_prompt_handler):
+        """Test configuring API key with 'No API Key needed' option."""
+        # Setup mocks
+        mock_ph_instance = mock_prompt_handler.return_value
+        mock_ph_instance.select_option.return_value = "No API Key needed"
+
+        # Create a new TUI instance with mocked dependencies
+        tui = ConfigTUI()
+        tui.prompt_handler = mock_ph_instance
+
+        # Call the method
+        api_key, api_key_type = tui._configure_api_key()
+
+        # Verify results
+        self.assertEqual(api_key, "")
+        self.assertEqual(api_key_type, "none")
+
+    @patch('cci.tui.TestPromptHandler')
+    @patch('cci.tui.ConfigManager')
+    def test_configure_api_key_enter_api_key(self, mock_config_manager, mock_prompt_handler):
+        """Test configuring API key with direct entry."""
+        # Setup mocks
+        mock_ph_instance = mock_prompt_handler.return_value
+        mock_ph_instance.select_option.return_value = "Enter API Key"
+        mock_ph_instance.get_input.return_value = "test-api-key"
+
+        # Create a new TUI instance with mocked dependencies
+        tui = ConfigTUI()
+        tui.prompt_handler = mock_ph_instance
+
+        # Call the method
+        api_key, api_key_type = tui._configure_api_key()
+
+        # Verify results
+        self.assertEqual(api_key, "test-api-key")
+        self.assertEqual(api_key_type, "direct")
+
+    @patch('cci.tui.TestPromptHandler')
+    @patch('cci.tui.ConfigManager')
+    def test_configure_api_key_use_env_var(self, mock_config_manager, mock_prompt_handler):
+        """Test configuring API key with environment variable."""
+        # Setup mocks
+        mock_ph_instance = mock_prompt_handler.return_value
+        mock_ph_instance.select_option.return_value = "Use environment variable"
+        mock_ph_instance.get_input.return_value = "TEST_API_KEY"
+
+        # Create a new TUI instance with mocked dependencies
+        tui = ConfigTUI()
+        tui.prompt_handler = mock_ph_instance
+
+        # Call the method
+        api_key, api_key_type = tui._configure_api_key()
+
+        # Verify results
+        self.assertEqual(api_key, "TEST_API_KEY")
+        self.assertEqual(api_key_type, "envvar")
+
+    @patch('cci.tui.TestPromptHandler')
+    @patch('cci.tui.ConfigManager')
+    def test_configure_api_key_empty_api_key(self, mock_config_manager, mock_prompt_handler):
+        """Test configuring API key with empty direct entry."""
+        # Setup mocks
+        mock_ph_instance = mock_prompt_handler.return_value
+        mock_ph_instance.select_option.return_value = "Enter API Key"
+        mock_ph_instance.get_input.return_value = ""
+
+        # Create a new TUI instance with mocked dependencies
+        tui = ConfigTUI()
+        tui.prompt_handler = mock_ph_instance
+
+        # Call the method
+        api_key, api_key_type = tui._configure_api_key()
+
+        # Verify results
+        self.assertEqual(api_key, "")
+        self.assertEqual(api_key_type, "none")
+
+    @patch('cci.tui.TestPromptHandler')
+    @patch('cci.tui.ConfigManager')
+    def test_configure_api_key_empty_env_var(self, mock_config_manager, mock_prompt_handler):
+        """Test configuring API key with empty environment variable name."""
+        # Setup mocks
+        mock_ph_instance = mock_prompt_handler.return_value
+        mock_ph_instance.select_option.return_value = "Use environment variable"
+        mock_ph_instance.get_input.return_value = ""
+
+        # Create a new TUI instance with mocked dependencies
+        tui = ConfigTUI()
+        tui.prompt_handler = mock_ph_instance
+
+        # Call the method
+        api_key, api_key_type = tui._configure_api_key()
+
+        # Verify results
+        self.assertEqual(api_key, "")
+        self.assertEqual(api_key_type, "none")
+
+    @patch('cci.tui.TestPromptHandler')
+    @patch('cci.tui.ConfigManager')
+    def test_delete_provider_no_providers(self, mock_config_manager, mock_prompt_handler):
+        """Test deleting a provider when no providers exist."""
+        # Setup mocks
+        mock_ph_instance = mock_prompt_handler.return_value
+        mock_ph_instance.wait_for_continue = MagicMock()
+
+        mock_cm_instance = mock_config_manager.return_value
+        mock_cm_instance.config = {
+            'providers': {}
+        }
+
+        # Create a new TUI instance with mocked dependencies
+        tui = ConfigTUI()
+        tui.prompt_handler = mock_ph_instance
+
+        # Call the method
+        tui._delete_provider()
+
+        # Verify calls were made
+        mock_ph_instance.clear_screen.assert_called()
+        mock_ph_instance.print_message.assert_any_call("Delete Provider", "bold blue")
+        mock_ph_instance.print_message.assert_any_call("No providers configured.", "yellow")
+        mock_ph_instance.wait_for_continue.assert_called()
+
+    @patch('cci.tui.TestPromptHandler')
+    @patch('cci.tui.ConfigManager')
+    def test_delete_provider_cancel_deletion(self, mock_config_manager, mock_prompt_handler):
+        """Test deleting a provider but canceling the operation."""
+        # Setup mocks
+        mock_ph_instance = mock_prompt_handler.return_value
+        mock_ph_instance.select_option.return_value = "test_provider"
+        mock_ph_instance.confirm_action.return_value = False
+        mock_ph_instance.wait_for_continue = MagicMock()
+
+        mock_cm_instance = mock_config_manager.return_value
+        mock_cm_instance.config = {
+            'providers': {
+                'test_provider': {
+                    'base_url': 'http://test.com',
+                    'models': ['model1']
+                }
+            }
+        }
+        mock_cm_instance.get_configs_for_provider.return_value = []
+
+        # Create a new TUI instance with mocked dependencies
+        tui = ConfigTUI()
+        tui.prompt_handler = mock_ph_instance
+
+        # Call the method
+        tui._delete_provider()
+
+        # Verify calls were made
+        mock_ph_instance.clear_screen.assert_called()
+        mock_ph_instance.select_option.assert_called()
+        mock_ph_instance.confirm_action.assert_called()
+        mock_ph_instance.print_message.assert_any_call("Deletion cancelled.", "yellow")
+        mock_ph_instance.wait_for_continue.assert_called()
+
+    @patch('cci.tui.TestPromptHandler')
+    @patch('cci.tui.ConfigManager')
+    def test_check_and_prompt_for_new_default_no_configs(self, mock_config_manager, mock_prompt_handler):
+        """Test checking for new default when no configurations exist."""
+        # Setup mocks
+        mock_ph_instance = mock_prompt_handler.return_value
+
+        mock_cm_instance = mock_config_manager.return_value
+        mock_cm_instance.config = {
+            'configs': {}
+        }
+
+        # Create a new TUI instance with mocked dependencies
+        tui = ConfigTUI()
+        tui.prompt_handler = mock_ph_instance
+
+        # Call the method and expect SystemExit
+        with self.assertRaises(SystemExit) as cm:
+            tui._check_and_prompt_for_new_default()
+
+        # Verify the exit code is 1
+        self.assertEqual(cm.exception.code, 1)
+
+        # Verify calls were made
+        mock_ph_instance.print_message.assert_called_with("No configurations available. Exiting with error.", "red")
+
+    @patch('cci.tui.TestPromptHandler')
+    @patch('cci.tui.ConfigManager')
+    def test_check_and_prompt_for_new_default_one_config(self, mock_config_manager, mock_prompt_handler):
+        """Test checking for new default when only one configuration exists."""
+        # Setup mocks
+        mock_ph_instance = mock_prompt_handler.return_value
+        mock_ph_instance.wait_for_continue = MagicMock()
+
+        mock_cm_instance = mock_config_manager.return_value
+        mock_cm_instance.config = {
+            'configs': {
+                'single_config': {}
+            }
+        }
+
+        # Create a new TUI instance with mocked dependencies
+        tui = ConfigTUI()
+        tui.prompt_handler = mock_ph_instance
+
+        # Call the method
+        tui._check_and_prompt_for_new_default()
+
+        # Verify calls were made
+        mock_cm_instance.set_default_config.assert_called_with('single_config')
+        mock_ph_instance.print_message.assert_called_with(
+            "Configuration 'single_config' automatically set as default.", "green")
+
+    @patch('cci.tui.TestPromptHandler')
+    @patch('cci.tui.ConfigManager')
+    def test_check_and_prompt_for_new_default_multiple_configs(self, mock_config_manager, mock_prompt_handler):
+        """Test checking for new default when multiple configurations exist."""
+        # Setup mocks
+        mock_ph_instance = mock_prompt_handler.return_value
+        mock_ph_instance.select_config.return_value = 'selected_config'
+        mock_ph_instance.wait_for_continue = MagicMock()
+
+        mock_cm_instance = mock_config_manager.return_value
+        mock_cm_instance.config = {
+            'configs': {
+                'config1': {},
+                'config2': {},
+                'selected_config': {}
+            }
+        }
+
+        # Create a new TUI instance with mocked dependencies
+        tui = ConfigTUI()
+        tui.prompt_handler = mock_ph_instance
+
+        # Call the method
+        tui._check_and_prompt_for_new_default()
+
+        # Verify calls were made
+        mock_ph_instance.print_message.assert_any_call("The default configuration has been deleted.", "yellow")
+        mock_ph_instance.print_message.assert_any_call("You must select a new default configuration:", "bold yellow")
+
+    @patch('cci.tui.TestPromptHandler')
+    @patch('cci.tui.ConfigManager')
+    def test_add_provider_empty_name(self, mock_config_manager, mock_prompt_handler):
+        """Test adding a provider with empty name."""
+        # Setup mocks
+        mock_ph_instance = mock_prompt_handler.return_value
+        mock_ph_instance.get_input.return_value = ""  # Empty name
+        mock_ph_instance.wait_for_continue = MagicMock()
+
+        # Create a new TUI instance with mocked dependencies
+        tui = ConfigTUI()
+        tui.prompt_handler = mock_ph_instance
+
+        # Call the method
+        tui._add_provider()
+
+        # Verify calls were made
+        mock_ph_instance.clear_screen.assert_called()
+        mock_ph_instance.get_input.assert_called_with("Enter provider name")
+        mock_ph_instance.print_message.assert_called_with("Provider name cannot be empty.", "red")
+        mock_ph_instance.wait_for_continue.assert_called()
+
+    @patch('cci.tui.TestPromptHandler')
+    @patch('cci.tui.ConfigManager')
+    def test_add_provider_empty_base_url(self, mock_config_manager, mock_prompt_handler):
+        """Test adding a provider with empty base URL."""
+        # Setup mocks
+        mock_ph_instance = mock_prompt_handler.return_value
+        mock_ph_instance.get_input.side_effect = ['test_provider', '']  # Provider name, then empty URL
+        mock_ph_instance.wait_for_continue = MagicMock()
+
+        # Create a new TUI instance with mocked dependencies
+        tui = ConfigTUI()
+        tui.prompt_handler = mock_ph_instance
+
+        # Call the method
+        tui._add_provider()
+
+        # Verify calls were made
+        mock_ph_instance.clear_screen.assert_called()
+        mock_ph_instance.get_input.assert_any_call("Enter provider name")
+        mock_ph_instance.get_input.assert_any_call("Enter base URL")
+        mock_ph_instance.print_message.assert_called_with("Base URL cannot be empty.", "red")
+        mock_ph_instance.wait_for_continue.assert_called()
+
+    @patch('cci.tui.TestPromptHandler')
+    @patch('cci.tui.ConfigManager')
+    def test_create_config_no_providers(self, mock_config_manager, mock_prompt_handler):
+        """Test creating a configuration when no providers exist."""
+        # Setup mocks
+        mock_ph_instance = mock_prompt_handler.return_value
+        mock_ph_instance.wait_for_continue = MagicMock()
+
+        mock_cm_instance = mock_config_manager.return_value
+        mock_cm_instance.config = {
+            'providers': {}
+        }
+
+        # Create a new TUI instance with mocked dependencies
+        tui = ConfigTUI()
+        tui.prompt_handler = mock_ph_instance
+
+        # Call the method
+        tui._create_config()
+
+        # Verify calls were made
+        mock_ph_instance.clear_screen.assert_called()
+        mock_ph_instance.print_message.assert_called_with(
+            "No providers configured. Please add a provider first.", "yellow")
+        mock_ph_instance.wait_for_continue.assert_called()
+
+    @patch('cci.tui.TestPromptHandler')
+    @patch('cci.tui.ConfigManager')
+    def test_create_config_no_models_available(self, mock_config_manager, mock_prompt_handler):
+        """Test creating a configuration when no models are available for the provider."""
+        # Setup mocks
+        mock_ph_instance = mock_prompt_handler.return_value
+        mock_ph_instance.select_provider.return_value = 'test_provider'
+        mock_ph_instance.wait_for_continue = MagicMock()
+
+        mock_cm_instance = mock_config_manager.return_value
+        mock_cm_instance.config = {
+            'providers': {
+                'test_provider': {
+                    'base_url': 'http://test.com',
+                    'models': []
+                }
+            }
+        }
+        mock_cm_instance.get_available_models.return_value = []
+
+        # Create a new TUI instance with mocked dependencies
+        tui = ConfigTUI()
+        tui.prompt_handler = mock_ph_instance
+
+        # Call the method
+        tui._create_config()
+
+        # Verify calls were made
+        mock_ph_instance.clear_screen.assert_called()
+        mock_ph_instance.select_provider.assert_called()
+        mock_ph_instance.print_message.assert_called_with("No models available for the selected provider.", "yellow")
+        mock_ph_instance.wait_for_continue.assert_called()
+
+    @patch('cci.tui.TestPromptHandler')
+    @patch('cci.tui.ConfigManager')
+    def test_set_default_config_no_configs(self, mock_config_manager, mock_prompt_handler):
+        """Test setting default configuration when no configurations exist."""
+        # Setup mocks
+        mock_ph_instance = mock_prompt_handler.return_value
+        mock_ph_instance.wait_for_continue = MagicMock()
+
+        mock_cm_instance = mock_config_manager.return_value
+        mock_cm_instance.config = {
+            'configs': {}
+        }
+
+        # Create a new TUI instance with mocked dependencies
+        tui = ConfigTUI()
+        tui.prompt_handler = mock_ph_instance
+
+        # Call the method
+        tui._set_default_config()
+
+        # Verify calls were made
+        mock_ph_instance.clear_screen.assert_called()
+        mock_ph_instance.print_message.assert_called_with(
+            "No configurations saved. Please create a configuration first.", "yellow")
+        mock_ph_instance.wait_for_continue.assert_called()
+
+    @patch('cci.tui.TestPromptHandler')
+    @patch('cci.tui.ConfigManager')
+    def test_delete_config_no_configs(self, mock_config_manager, mock_prompt_handler):
+        """Test deleting a configuration when no configurations exist."""
+        # Setup mocks
+        mock_ph_instance = mock_prompt_handler.return_value
+        mock_ph_instance.wait_for_continue = MagicMock()
+
+        mock_cm_instance = mock_config_manager.return_value
+        mock_cm_instance.config = {
+            'configs': {}
+        }
+
+        # Create a new TUI instance with mocked dependencies
+        tui = ConfigTUI()
+        tui.prompt_handler = mock_ph_instance
+
+        # Call the method
+        tui._delete_config()
+
+        # Verify calls were made
+        mock_ph_instance.clear_screen.assert_called()
+        mock_ph_instance.print_message.assert_called_with("No configurations saved.", "yellow")
+        mock_ph_instance.wait_for_continue.assert_called()
+
+    @patch('cci.tui.TestPromptHandler')
+    @patch('cci.tui.ConfigManager')
+    def test_delete_config_cancel_deletion(self, mock_config_manager, mock_prompt_handler):
+        """Test deleting a configuration but canceling the operation."""
+        # Setup mocks
+        mock_ph_instance = mock_prompt_handler.return_value
+        mock_ph_instance.select_config.return_value = 'test_config'
+        mock_ph_instance.confirm_action.return_value = False
+        mock_ph_instance.wait_for_continue = MagicMock()
+
+        mock_cm_instance = mock_config_manager.return_value
+        mock_cm_instance.config = {
+            'configs': {
+                'test_config': {},
+                'other_config': {}
+            },
+            'default_config': 'other_config'
+        }
+
+        # Create a new TUI instance with mocked dependencies
+        tui = ConfigTUI()
+        tui.prompt_handler = mock_ph_instance
+
+        # Call the method
+        tui._delete_config()
+
+        # Verify calls were made
+        mock_ph_instance.clear_screen.assert_called()
+        mock_ph_instance.select_config.assert_called()
+        mock_ph_instance.confirm_action.assert_called()
+        mock_ph_instance.print_message.assert_called_with("Deletion cancelled.", "yellow")
+        mock_ph_instance.wait_for_continue.assert_called()
+
+    @patch('cci.tui.TestPromptHandler')
+    @patch('cci.tui.ConfigManager')
+    def test_list_providers_no_providers(self, mock_config_manager, mock_prompt_handler):
+        """Test listing providers when no providers exist."""
+        # Setup mocks
+        mock_ph_instance = mock_prompt_handler.return_value
+        mock_ph_instance.wait_for_continue = MagicMock()
+
+        mock_cm_instance = mock_config_manager.return_value
+        mock_cm_instance.config = {
+            'providers': {}
+        }
+
+        # Create a new TUI instance with mocked dependencies
+        tui = ConfigTUI()
+        tui.prompt_handler = mock_ph_instance
+
+        # Call the method
+        tui._list_providers()
+
+        # Verify calls were made
+        mock_ph_instance.clear_screen.assert_called()
+        mock_ph_instance.print_message.assert_any_call("Configured Providers", "bold blue")
+        mock_ph_instance.print_message.assert_any_call("No providers configured.", "yellow")
+        mock_ph_instance.wait_for_continue.assert_called()
+
+    @patch('cci.tui.TestPromptHandler')
+    @patch('cci.tui.ConfigManager')
+    def test_list_providers_with_api_keys(self, mock_config_manager, mock_prompt_handler):
+        """Test listing providers with different API key types."""
+        # Setup mocks
+        mock_ph_instance = mock_prompt_handler.return_value
+        mock_ph_instance.wait_for_continue = MagicMock()
+
+        mock_cm_instance = mock_config_manager.return_value
+        mock_cm_instance.config = {
+            'providers': {
+                'direct_key_provider': {
+                    'base_url': 'http://direct.com',
+                    'models': ['model1'],
+                    'api_key': 'secret-key',
+                    'api_key_type': 'direct'
+                },
+                'env_var_provider': {
+                    'base_url': 'http://env.com',
+                    'models': ['model2'],
+                    'api_key': 'ENV_VAR_NAME',
+                    'api_key_type': 'envvar'
+                },
+                'no_key_provider': {
+                    'base_url': 'http://none.com',
+                    'models': ['model3'],
+                    'api_key': '',
+                    'api_key_type': 'none'
+                }
+            }
+        }
+
+        # Create a new TUI instance with mocked dependencies
+        tui = ConfigTUI()
+        tui.prompt_handler = mock_ph_instance
+
+        # Call the method
+        tui._list_providers()
+
+        # Verify calls were made
+        mock_ph_instance.clear_screen.assert_called()
+        mock_ph_instance.print_message.assert_any_call("Configured Providers", "bold blue")
+        mock_ph_instance.print_message.assert_any_call("direct_key_provider", "bold")
+        mock_ph_instance.print_message.assert_any_call("  URL: http://direct.com")
+        mock_ph_instance.print_message.assert_any_call("  API Key: [Direct Entry]")
+        mock_ph_instance.print_message.assert_any_call("  Models: 1")
+        mock_ph_instance.wait_for_continue.assert_called()
+
 
 if __name__ == '__main__':
     unittest.main()

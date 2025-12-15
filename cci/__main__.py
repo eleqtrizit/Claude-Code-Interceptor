@@ -101,7 +101,11 @@ def handle_help_passthrough(passthrough_args, cci_args):
     # Pass through to get Claude CLI help
     try:
         cmd = ['claude'] + passthrough_args
-        result = subprocess.run(cmd, capture_output=True, text=True, env=env_vars)
+        # Combine current environment with configuration variables
+        full_env = os.environ.copy()
+        full_env |= env_vars
+        full_env["ANTHROPIC_AUTH_TOKEN"] = full_env.get("ANTHROPIC_API_KEY", "")
+        result = subprocess.run(cmd, capture_output=True, text=True, env=full_env)
         print(result.stdout)
         if result.stderr:
             print(result.stderr, file=sys.stderr)
