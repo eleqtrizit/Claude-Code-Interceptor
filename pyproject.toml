@@ -1,6 +1,6 @@
 [project]
 name = "claude-code-interceptor"
-version = "0.1.8"
+version = "0.1.9"
 description = "Claude Code Interceptor - A wrapper for Claude Code CLI"
 readme = "README.md"
 requires-python = ">=3.11"
