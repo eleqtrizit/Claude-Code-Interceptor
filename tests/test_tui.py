@@ -409,6 +409,7 @@ class TestConfigTUI(unittest.TestCase):
                 }
             }
         }
+        mock_cm_instance.get_live_models_for_provider.return_value = ['test_model']
         mock_cm_instance.get_available_models.return_value = ['test_model']
 
         # Create a new TUI instance with mocked dependencies
@@ -898,6 +899,7 @@ class TestConfigTUI(unittest.TestCase):
                 }
             }
         }
+        mock_cm_instance.get_live_models_for_provider.return_value = None
         mock_cm_instance.get_available_models.return_value = []
 
         # Create a new TUI instance with mocked dependencies

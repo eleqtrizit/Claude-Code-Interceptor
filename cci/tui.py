@@ -24,6 +24,14 @@ from cci.utils.models_fetch import fetch_models, list_models
 class PromptHandler(ABC):
     """Abstract base class for handling user prompts in different environments."""
 
+    def __init__(self, console: Console):
+        """Initialize the prompt handler with a console.
+
+        :param console: Rich console instance for output
+        :type console: Console
+        """
+        self.console = console
+
     @abstractmethod
     def select_option(self, message: str, choices: List[str], default: Optional[str] = None) -> str:
         """Select an option from a list of choices.
@@ -138,18 +146,19 @@ class PromptHandler(ABC):
         """
         pass
 
-    @abstractmethod
     def clear_screen(self) -> None:
-        """Clear the screen."""
-        pass
+        """Clear the screen.
 
-    @abstractmethod
+        :return: None
+        :rtype: None
+        """
+        self.console.clear()
+
     def print_message(self, message: str, style: str = "") -> None:
         """Print a message to the console.
 
-        This abstract method is implemented by both InquirerPromptHandler and TestPromptHandler
-        to provide consistent output formatting across different environments while maintaining
-        their respective styling capabilities.
+        Provides consistent output formatting across different environments while maintaining
+        styling capabilities.
 
         :param message: Message to print
         :type message: str
@@ -158,20 +167,25 @@ class PromptHandler(ABC):
         :return: None
         :rtype: None
         """
-        pass
+        if style:
+            self.console.print(f"[{style}]{message}[/{style}]")
+        else:
+            self.console.print(message)
 
-    @abstractmethod
     def wait_for_continue(self) -> None:
         """Wait for the user to press Enter to continue.
 
-        This abstract method is implemented by both InquirerPromptHandler and TestPromptHandler
-        to provide a consistent way to pause execution and wait for user input across different
+        Provides a consistent way to pause execution and wait for user input across different
         environments.
 
         :return: None
         :rtype: None
         """
-        pass
+        try:
+            input("Press Enter to continue...")
+        except KeyboardInterrupt:
+            self.console.print("\n[green]Goodbye![/green]")
+            sys.exit(0)
 
 
 class InquirerPromptHandler(PromptHandler):
@@ -186,7 +200,12 @@ class InquirerPromptHandler(PromptHandler):
     """
 
     def __init__(self, console: Console):
-        self.console = console
+        """Initialize the inquirer prompt handler.
+
+        :param console: Rich console instance for output
+        :type console: Console
+        """
+        super().__init__(console)
 
     def select_option(self, message: str, choices: List[str], default: Optional[str] = None) -> str:
         questions = [
@@ -297,23 +316,6 @@ class InquirerPromptHandler(PromptHandler):
         }
         return action_map.get(selected, 'q')
 
-    def clear_screen(self) -> None:
-        self.console.clear()
-
-    def print_message(self, message: str, style: str = "") -> None:
-        if style:
-            self.console.print(f"[{style}]{message}[/{style}]")
-        else:
-            self.console.print(message)
-
-    def wait_for_continue(self) -> None:
-        # Simply wait for user to press Enter
-        try:
-            input("Press Enter to continue...")
-        except KeyboardInterrupt:
-            self.console.print("\n[green]Goodbye![/green]")
-            sys.exit(0)
-
 
 class TestPromptHandler(PromptHandler):
     """Prompt handler for testing environment using rich.prompt.Prompt.
@@ -327,7 +329,12 @@ class TestPromptHandler(PromptHandler):
     """
 
     def __init__(self, console: Console):
-        self.console = console
+        """Initialize the test prompt handler.
+
+        :param console: Rich console instance for output
+        :type console: Console
+        """
+        super().__init__(console)
 
     def select_option(self, message: str, choices: List[str], default: Optional[str] = None) -> str:
         # For testing, we display the choices and ask for input
@@ -406,23 +413,6 @@ class TestPromptHandler(PromptHandler):
 
         return Prompt.ask("[bold cyan]Select an option[/bold cyan]",
                           choices=["1", "2", "3", "4", "5", "6", "7", "q", "Q"])
-
-    def clear_screen(self) -> None:
-        self.console.clear()
-
-    def print_message(self, message: str, style: str = "") -> None:
-        if style:
-            self.console.print(f"[{style}]{message}[/{style}]")
-        else:
-            self.console.print(message)
-
-    def wait_for_continue(self) -> None:
-        # Simply wait for user to press Enter
-        try:
-            input("Press Enter to continue...")
-        except KeyboardInterrupt:
-            self.console.print("\n[green]Goodbye![/green]")
-            sys.exit(0)
 
 
 def get_prompt_handler(console: Console) -> PromptHandler:
@@ -525,7 +515,15 @@ class ConfigTUI:
         selected_provider = self.prompt_handler.select_provider(provider_names)
 
         # Step 2: Select models for Haiku, Sonnet, and Opus
-        available_models = self.config_manager.get_available_models(selected_provider)
+        # Fetch fresh models from API
+        available_models = self.config_manager.get_live_models_for_provider(selected_provider)
+
+        # Fallback to cached models if API fails
+        if not available_models:
+            available_models = self.config_manager.get_available_models(selected_provider)
+            if available_models:
+                self.prompt_handler.print_message("Using cached models (API unavailable).", "yellow")
+
         if not available_models:
             self.prompt_handler.print_message("No models available for the selected provider.", "yellow")
             self.prompt_handler.wait_for_continue()

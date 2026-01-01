@@ -77,13 +77,8 @@ class ConfigManager:
         :rtype: bool
         """
         try:
-            # Determine the actual API key value based on the API key type
-            actual_api_key = ""
-            if api_key_type == 'direct':
-                actual_api_key = api_key
-            elif api_key_type == 'envvar':
-                import os
-                actual_api_key = os.environ.get(api_key, '')
+            # Resolve the actual API key value based on the API key type
+            actual_api_key = self.resolve_api_key(api_key, api_key_type)
 
             # Fetch models from the provider using the API key for authentication
             models_data = fetch_models(base_url, actual_api_key)
@@ -173,32 +168,12 @@ class ConfigManager:
         :return: True if successful, False otherwise
         :rtype: bool
         """
-        if name not in self.config['providers']:
+        model_list = self.get_live_models_for_provider(name)
+        if model_list is None:
             return False
-
-        try:
-            provider = self.config['providers'][name]
-            base_url = provider['base_url']
-            api_key = provider.get('api_key', '')
-            api_key_type = provider.get('api_key_type', 'none')
-
-            # Determine the actual API key value based on the API key type
-            actual_api_key = ""
-            if api_key_type == 'direct':
-                actual_api_key = api_key
-            elif api_key_type == 'envvar':
-                import os
-                actual_api_key = os.environ.get(api_key, '')
-
-            # Fetch updated models using the API key for authentication
-            model_list = list_models(base_url, actual_api_key)
-
-            # Update provider models
-            self.config['providers'][name]['models'] = model_list
-            self.save_config()
-            return True
-        except Exception:
-            return False
+        self.config['providers'][name]['models'] = model_list
+        self.save_config()
+        return True
 
     def get_configs_for_provider(self, provider_name: str) -> List[str]:
         """
@@ -217,6 +192,49 @@ class ConfigManager:
                 associated_configs.append(config_name)
 
         return associated_configs
+
+    def resolve_api_key(self, api_key: str, api_key_type: str) -> str:
+        """
+        Resolve the actual API key value based on the API key type.
+
+        :param api_key: The API key or environment variable name
+        :type api_key: str
+        :param api_key_type: Type of API key handling (direct, envvar, none)
+        :type api_key_type: str
+        :return: The resolved API key value
+        :rtype: str
+        """
+        if api_key_type == 'direct':
+            return api_key
+        elif api_key_type == 'envvar':
+            import os
+            return os.environ.get(api_key, '')
+        return ''
+
+    def get_live_models_for_provider(self, provider_name: str) -> Optional[List[str]]:
+        """
+        Fetch live models from a provider's API.
+
+        :param provider_name: Name of the provider
+        :type provider_name: str
+        :return: List of live model names, or None if fetch failed
+        :rtype: Optional[List[str]]
+        """
+        if provider_name not in self.config['providers']:
+            return None
+
+        try:
+            provider = self.config['providers'][provider_name]
+            base_url = provider['base_url']
+            api_key = provider.get('api_key', '')
+            api_key_type = provider.get('api_key_type', 'none')
+
+            actual_api_key = self.resolve_api_key(api_key, api_key_type)
+            model_list = list_models(base_url, actual_api_key)
+
+            return model_list if model_list else None
+        except Exception:
+            return None
 
     def set_model(self, model_type: str, model_name: Optional[str]) -> bool:
         """
@@ -339,17 +357,10 @@ class ConfigManager:
         :return: Dictionary of environment variables
         :rtype: Dict[str, str]
         """
-        # Determine the API key value based on the API key type
-        api_key = ""
+        # Resolve the actual API key value based on the API key type
         api_key_type = config.get('api_key_type', 'none')
         api_key_value = config.get('api_key', '')
-
-        if api_key_type == 'direct':
-            api_key = api_key_value
-        elif api_key_type == 'envvar':
-            # Get the actual API key from the environment variable
-            import os
-            api_key = os.environ.get(api_key_value, '')
+        api_key = self.resolve_api_key(api_key_value, api_key_type)
 
         return {
             'ANTHROPIC_DEFAULT_HAIKU_MODEL': config['models']['haiku'],

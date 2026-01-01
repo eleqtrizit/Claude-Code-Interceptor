@@ -71,6 +71,10 @@ class TestDisplayUtils(unittest.TestCase):
             },
             'default_config': 'test-config'
         }
+        # Mock the get_live_models_for_provider to return live models
+        mock_config_manager.get_live_models_for_provider.return_value = [
+            'test-haiku', 'test-sonnet', 'test-opus'
+        ]
 
         display_configs_table(mock_config_manager)
 
