@@ -37,7 +37,7 @@ def display_env_vars_and_command(env_vars: Dict[str, str], command_args: List[st
 
 def _format_model_name(model_name: Optional[str], live_models: Optional[List[str]]) -> str:
     """
-    Format model name with color (red if stale, green if valid).
+    Format model name with color (red if stale, yellow if unverified, green if valid).
 
     :param model_name: The model name to format
     :type model_name: Optional[str]
@@ -49,8 +49,8 @@ def _format_model_name(model_name: Optional[str], live_models: Optional[List[str
     if not model_name:
         return 'N/A'
 
-    if live_models is None:  # API unavailable
-        return model_name
+    if live_models is None:  # API unavailable - mark as unverified
+        return f"[yellow]{model_name}[/yellow]"
 
     if model_name in live_models:
         return model_name  # Green (from column style)
@@ -121,9 +121,10 @@ def display_configs_table(config_manager: ConfigManager) -> None:
 
     console.print(table)
 
-    # Show warning if any API calls failed
+    # Show legend if any API calls failed
     if None in provider_models_cache.values():
         console.print(
-            "[yellow]Warning: Could not fetch live models from some providers. "
-            "Stale model detection unavailable.[/yellow]"
+            "\n[bold]Legend:[/bold] [green]✓ Valid[/green] | "
+            "[yellow]⚠ Unverified (API unavailable)[/yellow] | "
+            "[red]✗ Stale[/red]"
         )
