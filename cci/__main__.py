@@ -38,6 +38,8 @@ def load_configuration(cci_args):
             if config := config_manager.load_config_by_name(config_name):
                 return config_manager.get_environment_variables(config)
             print(f"Error: Configuration '{config_name}' not found.")
+            print("\nAvailable configurations:")
+            handle_list_configs_command()
             exit(1)
 
     print("Error: Set a default model (--cci-config) or use --cci-use-config with a valid configuration name.")

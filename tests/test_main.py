@@ -154,8 +154,9 @@ def test_load_configuration_with_specific_config(mock_get_config_manager):
     mock_config_manager.load_config_by_name.assert_called_once_with('test_config')
 
 
+@patch('cci.__main__.handle_list_configs_command')
 @patch('cci.config.get_config_manager')
-def test_load_configuration_config_not_found(mock_get_config_manager):
+def test_load_configuration_config_not_found(mock_get_config_manager, mock_handle_list):
     """Test load_configuration function when config is not found."""
     mock_config_manager = MagicMock()
     mock_get_config_manager.return_value = mock_config_manager
@@ -168,7 +169,14 @@ def test_load_configuration_config_not_found(mock_get_config_manager):
         load_configuration([])
 
     assert exc_info.value.code == 1
-    mock_print.assert_called_with("Error: Configuration 'nonexistent_config' not found.")
+    # Verify error message is printed
+    assert any("Error: Configuration 'nonexistent_config' not found." in str(call)
+               for call in mock_print.call_args_list)
+    # Verify available configs header is printed
+    assert any("Available configurations:" in str(call)
+               for call in mock_print.call_args_list)
+    # Verify handle_list_configs_command was called
+    mock_handle_list.assert_called_once()
 
 
 @patch('cci.config.get_config_manager')
